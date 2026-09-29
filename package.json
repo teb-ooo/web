@@ -1,6 +1,6 @@
 {
   "name": "@teb-ooo/web",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Non-visual frontend glue for factory apps: typed API client, auth hooks, SSE, forms, formatters.",
   "type": "module",
   "license": "UNLICENSED",
@@ -38,9 +38,7 @@
     "check:release-age": "node /srv/factory/rules/tools/check-release-age.mjs ."
   },
   "dependencies": {
-    "@tanstack/react-form": "^1.33.5",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1"
+    "@tanstack/react-form": "^1.33.5"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.80.0",
@@ -80,5 +78,10 @@
     "typescript": "6.0.3",
     "vite": "^7.3.6",
     "vitest": "^5.0.0"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }

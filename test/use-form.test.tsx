@@ -81,7 +81,7 @@ describe("useForm", () => {
     const { result } = renderHook(() => useForm(validator, { defaultValues: { title: "ab" } as CreateItem, onSubmit: vi.fn() }));
     expect(result.current.fieldError("title")).toBeUndefined();
     act(() => result.current.field("title").onBlur());
-    expect(result.current.fieldError("title")).toMatch(/at least 3|fewer than 3|3 characters/);
+    expect(result.current.fieldError("title")).toMatch(/length >= 3/);
     expect(result.current.errors["body.title"]).toBeDefined();
   });
 
