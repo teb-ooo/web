@@ -8,13 +8,15 @@ export type EventMap = object;
 
 /**
  * Events emitted by the Go `assistant` package (`POST /api/assistant/conversations/{id}/messages`).
- * Payload field names are this package's best reading of the contract; adjust when the Go side is final.
+ * The set and payload fields match `assistant.go` in factory-go (v0.1.2): `text`, `tool_call`, `tool_result`
+ * (`is_error` only when true), `done` (`stop_reason`) and `error` (`detail`, a sentence for the user).
  */
 export interface AssistantEvents {
   text: { text: string };
   tool_call: { id: string; name: string; input: unknown };
   tool_result: { id: string; content: unknown; is_error?: boolean };
   done: { stop_reason?: string };
+  error: { detail: string };
 }
 
 export interface EventMeta<K extends string = string> {

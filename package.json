@@ -1,6 +1,6 @@
 {
   "name": "@teb-ooo/web",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Non-visual frontend glue for factory apps: typed API client, auth hooks, SSE, forms, formatters.",
   "type": "module",
   "license": "UNLICENSED",

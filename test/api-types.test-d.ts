@@ -45,3 +45,8 @@ describe("createApi<paths> infers from the generated schema", () => {
     if (isApiError(e)) expectTypeOf(e).toEqualTypeOf<ApiError>();
   });
 });
+
+// AssistantEvents mirrors the Go assistant SSE events (factory-go assistant.go): exactly these five names.
+import type { AssistantEvents } from "../src/index";
+expectTypeOf<keyof AssistantEvents>().toEqualTypeOf<"text" | "tool_call" | "tool_result" | "done" | "error">();
+expectTypeOf<AssistantEvents["error"]>().toEqualTypeOf<{ detail: string }>();
