@@ -23,17 +23,25 @@ describe("route guards", () => {
     expect(await RequireUser(args())).toEqual({ user: plain });
   });
 
-  it("RequireUser redirects to /auth/login?next= when signed out", async () => {
+  it("requireUser sends the document to /auth/login?next= when signed out, and never resolves", async () => {
     server.use(http.get(ME, () => problemResponse(401)));
-    const e = await thrown(RequireUser(args()));
-    expect(isRedirect(e)).toBe(true);
-    expect((e as { options: { href?: string } }).options.href).toBe("/auth/login?next=%2Fadmin%2Fusers%3Fpage%3D2");
+    const urls: string[] = [];
+    let settled = false;
+    void requireUser({ redirect: (u) => urls.push(u) })(args()).then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+    await new Promise((r) => setTimeout(r, 50));
+    expect(urls).toEqual(["/auth/login?next=%2Fadmin%2Fusers%3Fpage%3D2"]);
+    expect(settled).toBe(false); // not a router redirect: a router `href` redirect is a client-side navigation
   });
 
   it("requireUser honours loginPath", async () => {
     server.use(http.get(ME, () => problemResponse(401)));
-    const e = await thrown(requireUser({ loginPath: "/sso" })(args()));
-    expect((e as { options: { href?: string } }).options.href).toBe("/sso?next=%2Fadmin%2Fusers%3Fpage%3D2");
+    const urls: string[] = [];
+    void requireUser({ loginPath: "/sso", redirect: (u) => urls.push(u) })(args());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(urls).toEqual(["/sso?next=%2Fadmin%2Fusers%3Fpage%3D2"]);
   });
 
   it("RequireAdmin passes admins", async () => {
@@ -43,7 +51,10 @@ describe("route guards", () => {
 
   it("RequireAdmin sends signed-out users to login", async () => {
     server.use(http.get(ME, () => problemResponse(401)));
-    expect(isRedirect(await thrown(RequireAdmin(args())))).toBe(true);
+    const urls: string[] = [];
+    void requireAdmin({ redirect: (u) => urls.push(u) })(args());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(urls).toEqual(["/auth/login?next=%2Fadmin%2Fusers%3Fpage%3D2"]);
   });
 
   it("RequireAdmin throws a typed ForbiddenError for non-admins by default", async () => {

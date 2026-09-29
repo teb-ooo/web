@@ -1,7 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { ensureUser, type AuthOptions, type User } from "./auth.js";
-import { DEFAULT_LOGIN_PATH, loginUrl } from "./request.js";
+import { DEFAULT_LOGIN_PATH, defaultRedirect, loginUrl, type RedirectFn } from "./request.js";
 
 /** Thrown by `RequireAdmin` for a signed-in non-admin when no `redirectTo` is configured. */
 export class ForbiddenError extends Error {
@@ -24,6 +24,8 @@ export interface GuardArgs {
 
 export interface GuardOptions extends AuthOptions {
   loginPath?: string;
+  /** How the browser is sent to the login page: a full document load (default `window.location.assign`). */
+  redirect?: RedirectFn;
 }
 
 export interface AdminGuardOptions extends GuardOptions {
@@ -31,13 +33,16 @@ export interface AdminGuardOptions extends GuardOptions {
   redirectTo?: string;
 }
 
-/** Guard factory. Returns a `beforeLoad` function that resolves the user or throws a router redirect. */
+/** Guard factory. Returns a `beforeLoad` function that resolves the user, or navigates the document to the login page. */
 export function requireUser(opts: GuardOptions = {}) {
   return async ({ context, location }: GuardArgs): Promise<{ user: User }> => {
     const user = await ensureUser(context.queryClient, opts);
     if (!user) {
-      // href: the login page is served by the Go app, not a client route.
-      throw redirect({ href: loginUrl(location.href, opts.loginPath ?? DEFAULT_LOGIN_PATH) });
+      // The login page is served by the Go app, not a client route, and TanStack Router treats a same-origin
+      // `href` as a client-side navigation (the SPA would land on a not-found page). So load the document, and
+      // never resolve: the page is going away, and the route must not render or load anything meanwhile.
+      (opts.redirect ?? defaultRedirect)(loginUrl(location.href, opts.loginPath ?? DEFAULT_LOGIN_PATH));
+      return new Promise<never>(() => undefined);
     }
     return { user };
   };
