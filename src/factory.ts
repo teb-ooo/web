@@ -2,7 +2,6 @@
 export interface FactoryRaw {
   app_name?: string;
   env?: string;
-  agent_url?: string;
   claude_session_url?: string;
   /** true when the app enables the end-user assistant. */
   assistant?: boolean;
@@ -14,7 +13,6 @@ export interface FactoryRaw {
 export interface FactoryConfig {
   appName: string;
   env: string;
-  agentUrl: string;
   claudeSessionUrl: string;
   /** true when the app enables the end-user assistant (`/assistant` route). false when absent. */
   assistant: boolean;
@@ -64,7 +62,6 @@ export function getFactory(): FactoryConfig {
   return {
     appName: str(raw.app_name, ""),
     env: str(raw.env, ""),
-    agentUrl: str(raw.agent_url, ""),
     claudeSessionUrl: str(raw.claude_session_url, ""),
     assistant: raw.assistant === true,
     locale: validLocale(str(raw.locale, DEFAULT_LOCALE)),
@@ -76,7 +73,6 @@ export function getFactory(): FactoryConfig {
 export const factory: Readonly<FactoryConfig> = Object.defineProperties({} as FactoryConfig, {
   appName: { enumerable: true, get: () => getFactory().appName },
   env: { enumerable: true, get: () => getFactory().env },
-  agentUrl: { enumerable: true, get: () => getFactory().agentUrl },
   claudeSessionUrl: { enumerable: true, get: () => getFactory().claudeSessionUrl },
   assistant: { enumerable: true, get: () => getFactory().assistant },
   locale: { enumerable: true, get: () => getFactory().locale },

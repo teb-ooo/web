@@ -33,4 +33,4 @@ function NewItem() {
 
 Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setFactory`, `setupMswServer`, `sseResponse`, `problemResponse`.
 
-`factory` (from `window.__FACTORY__`) exposes `{ appName, env, agentUrl, claudeSessionUrl, assistant, locale, timezone }`; `assistant` is a boolean, false when absent.
+`factory` (from `window.__FACTORY__`) exposes `{ appName, env, claudeSessionUrl, assistant, locale, timezone }`; `assistant` is a boolean, false when absent.

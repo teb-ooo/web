@@ -7,7 +7,6 @@ describe("factory", () => {
     expect(getFactory()).toEqual({
       appName: "",
       env: "",
-      agentUrl: "",
       claudeSessionUrl: "",
       assistant: false,
       locale: "en-US",
@@ -19,7 +18,6 @@ describe("factory", () => {
     setFactory({
       app_name: "hello",
       env: "staging",
-      agent_url: "/_agent/tty/",
       claude_session_url: "https://claude.ai/code/session_1",
       assistant: true,
       locale: "en-GB",
@@ -28,7 +26,6 @@ describe("factory", () => {
     expect(getFactory()).toEqual({
       appName: "hello",
       env: "staging",
-      agentUrl: "/_agent/tty/",
       claudeSessionUrl: "https://claude.ai/code/session_1",
       assistant: true,
       locale: "en-GB",
@@ -54,8 +51,7 @@ describe("factory", () => {
   it("ignores junk values", () => {
     (window as unknown as { __FACTORY__: unknown }).__FACTORY__ = "junk";
     expect(getFactory().appName).toBe("");
-    (window as unknown as { __FACTORY__: unknown }).__FACTORY__ = { app_name: 3, agent_url: null };
+    (window as unknown as { __FACTORY__: unknown }).__FACTORY__ = { app_name: 3 };
     expect(getFactory().appName).toBe("");
-    expect(getFactory().agentUrl).toBe("");
   });
 });
