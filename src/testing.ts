@@ -7,9 +7,9 @@ import type { FactoryRaw } from "./factory.js";
 
 export { http, HttpResponse, delay } from "msw";
 
-/** Sets `window.__FACTORY__` (snake_case, as the Go spa package delivers it). Merges over defaults `{}`. */
+/** Sets `window.__FACTORY__` (snake_case, as the Go spa package delivers it). Defaults: `assistant: false`. */
 export function setFactory(raw: FactoryRaw = {}): void {
-  window.__FACTORY__ = { ...raw };
+  window.__FACTORY__ = { assistant: false, ...raw };
 }
 
 export function resetFactory(): void {
