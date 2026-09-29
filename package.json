@@ -9,8 +9,7 @@
     "url": "git+https://github.com/teb-ooo/web.git"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "registry": "http://npm-registry:4873/"
   },
   "sideEffects": false,
   "engines": {
