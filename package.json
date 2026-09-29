@@ -1,6 +1,6 @@
 {
   "name": "@teb-ooo/web",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Non-visual frontend glue for factory apps: typed API client, auth hooks, SSE, forms, formatters.",
   "type": "module",
   "license": "UNLICENSED",
@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "gen:fixture": "openapi-typescript test/fixtures/openapi.json -o test/fixtures/schema.d.ts",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "check:release-age": "node /srv/factory/rules/tools/check-release-age.mjs ."
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.5",
@@ -45,7 +46,7 @@
     "@tanstack/react-query": "^5.80.0",
     "@tanstack/react-router": "^1.0.0",
     "@testing-library/react": "^16.0.0",
-    "msw": "^3.0.0",
+    "msw": ">=2.15.0",
     "openapi-fetch": "^0.17.0",
     "openapi-react-query": "^0.5.0",
     "react": "^19.0.0",
@@ -63,14 +64,14 @@
     }
   },
   "devDependencies": {
-    "@tanstack/react-query": "^5.104.0",
-    "@tanstack/react-router": "^1.170.40",
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-router": "^1.170.36",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "jsdom": "^30.1.1",
-    "msw": "^3.0.0",
+    "jsdom": "^30.0.1",
+    "msw": "^2.15.0",
     "openapi-fetch": "^0.17.0",
     "openapi-react-query": "^0.5.4",
     "openapi-typescript": "^7.13.0",
@@ -78,6 +79,6 @@
     "react-dom": "^19.3.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.0"
   }
 }

@@ -186,6 +186,9 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
         });
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+        // Cancel the reader when the signal aborts so a pending read() ends even if the body is not tied to the signal.
+        const onAbort = () => void reader.cancel().catch(() => undefined);
+        signal.addEventListener("abort", onAbort, { once: true });
         try {
           for (;;) {
             const { done, value } = await reader.read();
@@ -196,7 +199,8 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
           parser.push(decoder.decode());
           parser.end();
         } finally {
-          if (finished) await reader.cancel().catch(() => undefined);
+          signal.removeEventListener("abort", onAbort);
+          if (finished || signal.aborted) await reader.cancel().catch(() => undefined);
           else reader.releaseLock();
         }
         if (finished || !cfg.reconnect) {

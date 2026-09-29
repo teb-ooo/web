@@ -40,7 +40,7 @@ export function renderWithProviders(
 /** Starts an msw server for the current test file: listen before all, reset after each, close after all. */
 export function setupMswServer(...handlers: Parameters<typeof setupServer>): SetupServer {
   const server = setupServer(...handlers);
-  beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
   return server;
