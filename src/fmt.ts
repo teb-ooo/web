@@ -1,4 +1,4 @@
-import { getFactory } from "./factory.js";
+import { getPlayground } from "./playground.js";
 
 export type DateInput = Date | string | number | null | undefined;
 
@@ -8,11 +8,11 @@ function toDate(v: DateInput): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** Date only, e.g. "Sep 29, 2026", in the factory locale and timezone. Empty string for missing/invalid input. */
+/** Date only, e.g. "Sep 29, 2026", in the playground locale and timezone. Empty string for missing/invalid input. */
 export function fmtDate(v: DateInput, options?: Intl.DateTimeFormatOptions): string {
   const d = toDate(v);
   if (!d) return "";
-  const { locale, timezone } = getFactory();
+  const { locale, timezone } = getPlayground();
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: timezone, ...options }).format(d);
 }
 
@@ -20,7 +20,7 @@ export function fmtDate(v: DateInput, options?: Intl.DateTimeFormatOptions): str
 export function fmtDateTime(v: DateInput, options?: Intl.DateTimeFormatOptions): string {
   const d = toDate(v);
   if (!d) return "";
-  const { locale, timezone } = getFactory();
+  const { locale, timezone } = getPlayground();
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -46,7 +46,7 @@ export function fmtRelative(v: DateInput, now: Date | number = Date.now()): stri
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diffSec = Math.round((d.getTime() - nowMs) / 1000);
   const abs = Math.abs(diffSec);
-  const { locale } = getFactory();
+  const { locale } = getPlayground();
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   for (const [unit, secs] of UNITS) {
     if (abs >= secs || unit === "second") {
@@ -59,7 +59,7 @@ export function fmtRelative(v: DateInput, now: Date | number = Date.now()): stri
 /** Locale-aware number. Empty string for null/undefined/NaN. */
 export function fmtNumber(v: number | null | undefined, options?: Intl.NumberFormatOptions): string {
   if (v === null || v === undefined || Number.isNaN(v)) return "";
-  return new Intl.NumberFormat(getFactory().locale, options).format(v);
+  return new Intl.NumberFormat(getPlayground().locale, options).format(v);
 }
 
 const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte", "terabyte", "petabyte"] as const;
@@ -75,7 +75,7 @@ export function fmtBytes(v: number | null | undefined, fractionDigits = 1): stri
     i++;
   }
   const unit = BYTE_UNITS[i] ?? "byte";
-  return new Intl.NumberFormat(getFactory().locale, {
+  return new Intl.NumberFormat(getPlayground().locale, {
     style: "unit",
     unit,
     unitDisplay: "short",

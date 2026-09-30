@@ -51,7 +51,7 @@ export function defaultBaseUrl(): string {
   return typeof window === "undefined" ? "" : window.location.origin;
 }
 
-/** Applies the factory request defaults (credentials, X-Request-Id) to a Request. Caller-set request ids win. */
+/** Applies the playground request defaults (credentials, X-Request-Id) to a Request. Caller-set request ids win. */
 export function withDefaults(input: Request, requestId: () => string = newRequestId): Request {
   if (!input.headers.has(REQUEST_ID_HEADER)) input.headers.set(REQUEST_ID_HEADER, requestId());
   return input;

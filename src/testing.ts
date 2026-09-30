@@ -3,17 +3,17 @@ import { render, type RenderResult } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setupServer, type SetupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
-import type { FactoryRaw } from "./factory.js";
+import type { PlaygroundRaw } from "./playground.js";
 
 export { http, HttpResponse, delay } from "msw";
 
-/** Sets `window.__FACTORY__` (snake_case, as the Go spa package delivers it). Defaults: `assistant: false`. */
-export function setFactory(raw: FactoryRaw = {}): void {
-  window.__FACTORY__ = { assistant: false, ...raw };
+/** Sets `window.__PLAYGROUND__` (snake_case, as the Go spa package delivers it). Defaults: `assistant: false`. */
+export function setPlayground(raw: PlaygroundRaw = {}): void {
+  window.__PLAYGROUND__ = { assistant: false, ...raw };
 }
 
-export function resetFactory(): void {
-  delete window.__FACTORY__;
+export function resetPlayground(): void {
+  delete window.__PLAYGROUND__;
 }
 
 /** A QueryClient that never retries and never caches between tests. */
@@ -23,8 +23,8 @@ export function createTestQueryClient(): QueryClient {
 
 export interface RenderWithProvidersOptions {
   queryClient?: QueryClient;
-  /** Fake `window.__FACTORY__` for the render. */
-  factory?: FactoryRaw;
+  /** Fake `window.__PLAYGROUND__` for the render. */
+  playground?: PlaygroundRaw;
 }
 
 export function renderWithProviders(
@@ -32,7 +32,7 @@ export function renderWithProviders(
   options: RenderWithProvidersOptions = {},
 ): RenderResult & { queryClient: QueryClient } {
   const queryClient = options.queryClient ?? createTestQueryClient();
-  if (options.factory) setFactory(options.factory);
+  if (options.playground) setPlayground(options.playground);
   const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: queryClient }, children);
   return Object.assign(render(ui, { wrapper }), { queryClient });
 }

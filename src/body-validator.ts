@@ -51,7 +51,7 @@ function pointerToLocation(path: string[]): string {
 
 /*
  * An interpreting validator for the JSON Schema subset Huma emits (OpenAPI 3.1 request bodies). It never compiles
- * code (`new Function`/`eval`), because the factory's CSP forbids 'unsafe-eval' (ADR 0077). Messages follow Huma's
+ * code (`new Function`/`eval`), because the playground's CSP forbids 'unsafe-eval' (ADR 0077). Messages follow Huma's
  * ("expected length >= 3", "expected number >= 1") and keys are `body.field`, `body.tags[1]`, `body`.
  */
 type Schema = { [key: string]: unknown };

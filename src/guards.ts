@@ -33,7 +33,7 @@ export interface AdminGuardOptions extends GuardOptions {
   redirectTo?: string;
 }
 
-/** Guard factory. Returns a `beforeLoad` function that resolves the user, or navigates the document to the login page. */
+/** Guard playground. Returns a `beforeLoad` function that resolves the user, or navigates the document to the login page. */
 export function requireUser(opts: GuardOptions = {}) {
   return async ({ context, location }: GuardArgs): Promise<{ user: User }> => {
     const user = await ensureUser(context.queryClient, opts);
@@ -48,7 +48,7 @@ export function requireUser(opts: GuardOptions = {}) {
   };
 }
 
-/** Guard factory for admin-only routes. */
+/** Guard playground for admin-only routes. */
 export function requireAdmin(opts: AdminGuardOptions = {}) {
   const needUser = requireUser(opts);
   return async (args: GuardArgs): Promise<{ user: User }> => {

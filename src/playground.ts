@@ -1,5 +1,5 @@
-/** Raw shape of `window.__FACTORY__` as injected by the Go `spa` package (snake_case JSON). */
-export interface FactoryRaw {
+/** Raw shape of `window.__PLAYGROUND__` as injected by the Go `spa` package (snake_case JSON). */
+export interface PlaygroundRaw {
   app_name?: string;
   env?: string;
   claude_session_url?: string;
@@ -9,8 +9,8 @@ export interface FactoryRaw {
   timezone?: string;
 }
 
-/** Typed, camelCase view of `window.__FACTORY__`. Every field has a safe default. */
-export interface FactoryConfig {
+/** Typed, camelCase view of `window.__PLAYGROUND__`. Every field has a safe default. */
+export interface PlaygroundConfig {
   appName: string;
   env: string;
   claudeSessionUrl: string;
@@ -22,17 +22,17 @@ export interface FactoryConfig {
 
 declare global {
   interface Window {
-    __FACTORY__?: FactoryRaw;
+    __PLAYGROUND__?: PlaygroundRaw;
   }
 }
 
 export const DEFAULT_LOCALE = "en-US";
 export const DEFAULT_TIMEZONE = "UTC";
 
-function readRaw(): FactoryRaw {
+function readRaw(): PlaygroundRaw {
   if (typeof window === "undefined") return {};
-  const raw: unknown = window.__FACTORY__;
-  return raw !== null && typeof raw === "object" ? (raw as FactoryRaw) : {};
+  const raw: unknown = window.__PLAYGROUND__;
+  return raw !== null && typeof raw === "object" ? (raw as PlaygroundRaw) : {};
 }
 
 function str(v: unknown, fallback: string): string {
@@ -56,8 +56,8 @@ function validTimezone(v: string): string {
   }
 }
 
-/** Reads `window.__FACTORY__` fresh on every call. Safe when absent (tests, SSR). */
-export function getFactory(): FactoryConfig {
+/** Reads `window.__PLAYGROUND__` fresh on every call. Safe when absent (tests, SSR). */
+export function getPlayground(): PlaygroundConfig {
   const raw = readRaw();
   return {
     appName: str(raw.app_name, ""),
@@ -69,12 +69,12 @@ export function getFactory(): FactoryConfig {
   };
 }
 
-/** Live view: property reads always reflect the current `window.__FACTORY__`. */
-export const factory: Readonly<FactoryConfig> = Object.defineProperties({} as FactoryConfig, {
-  appName: { enumerable: true, get: () => getFactory().appName },
-  env: { enumerable: true, get: () => getFactory().env },
-  claudeSessionUrl: { enumerable: true, get: () => getFactory().claudeSessionUrl },
-  assistant: { enumerable: true, get: () => getFactory().assistant },
-  locale: { enumerable: true, get: () => getFactory().locale },
-  timezone: { enumerable: true, get: () => getFactory().timezone },
+/** Live view: property reads always reflect the current `window.__PLAYGROUND__`. */
+export const playground: Readonly<PlaygroundConfig> = Object.defineProperties({} as PlaygroundConfig, {
+  appName: { enumerable: true, get: () => getPlayground().appName },
+  env: { enumerable: true, get: () => getPlayground().env },
+  claudeSessionUrl: { enumerable: true, get: () => getPlayground().claudeSessionUrl },
+  assistant: { enumerable: true, get: () => getPlayground().assistant },
+  locale: { enumerable: true, get: () => getPlayground().locale },
+  timezone: { enumerable: true, get: () => getPlayground().timezone },
 });

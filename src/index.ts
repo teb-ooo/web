@@ -47,5 +47,5 @@ export {
 } from "./body-validator.js";
 export { useForm, type FieldBinding, type UseFormOptions, type UseFormResult } from "./use-form.js";
 export { fmtDate, fmtDateTime, fmtRelative, fmtNumber, fmtBytes, type DateInput } from "./fmt.js";
-export { factory, getFactory, type FactoryConfig, type FactoryRaw } from "./factory.js";
+export { playground, getPlayground, type PlaygroundConfig, type PlaygroundRaw } from "./playground.js";
 export { loginUrl, redirectToLogin, type RedirectFn } from "./request.js";

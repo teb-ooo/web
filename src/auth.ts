@@ -19,7 +19,7 @@ export interface AuthOptions {
   mePath?: string;
 }
 
-export const ME_QUERY_KEY = ["factory", "auth", "me"] as const;
+export const ME_QUERY_KEY = ["playground", "auth", "me"] as const;
 
 /** Fetches the current user. 401 resolves to `null`; it never redirects. Other failures throw ApiError. */
 export async function fetchUser(opts: AuthOptions = {}): Promise<User | null> {
