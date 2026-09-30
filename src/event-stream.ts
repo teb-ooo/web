@@ -8,7 +8,7 @@ export type EventMap = object;
 
 /**
  * Events emitted by the Go `assistant` package (`POST /api/assistant/conversations/{id}/messages`).
- * The set and payload fields match `assistant.go` in factory-go (v0.1.2): `text`, `tool_call`, `tool_result`
+ * The set and payload fields match `assistant.go` in playground-go (v0.1.2): `text`, `tool_call`, `tool_result`
  * (`is_error` only when true), `done` (`stop_reason`) and `error` (`detail`, a sentence for the user).
  */
 export interface AssistantEvents {

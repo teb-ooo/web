@@ -1,6 +1,6 @@
 # @teb-ooo/web
 
-The non-visual frontend glue for factory apps: a typed API client with TanStack Query bindings, `useUser`/`useIsAdmin` and route guards, an SSE hook, schema-derived forms, and locale-aware formatters. It has no components and no styles, so `@teb-ooo/ui` stays purely atomic. Apps never call `fetch` directly; everything goes through these hooks.
+The non-visual frontend glue for playground apps: a typed API client with TanStack Query bindings, `useUser`/`useIsAdmin` and route guards, an SSE hook, schema-derived forms, and locale-aware formatters. It has no components and no styles, so `@teb-ooo/ui` stays purely atomic. Apps never call `fetch` directly; everything goes through these hooks.
 
 Run the tests with `npm ci && npm test` (vitest, jsdom, msw; includes type-level tests), and check types with `npm run typecheck`. `npm run build` produces `dist/` (Vite library mode plus `tsc` declarations); `npm run gen:fixture` regenerates `test/fixtures/schema.d.ts` from `test/fixtures/openapi.json`.
 
@@ -31,6 +31,6 @@ function NewItem() {
 // route: beforeLoad: RequireUser   (router context must carry { queryClient })
 ```
 
-Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setFactory`, `setupMswServer`, `sseResponse`, `problemResponse`.
+Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer`, `sseResponse`, `problemResponse`.
 
-`factory` (from `window.__FACTORY__`) exposes `{ appName, env, claudeSessionUrl, assistant, locale, timezone }`; `assistant` is a boolean, false when absent.
+`playground` (from `window.__PLAYGROUND__`) exposes `{ appName, env, claudeSessionUrl, assistant, locale, timezone }`; `assistant` is a boolean, false when absent.

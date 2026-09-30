@@ -1,7 +1,7 @@
 {
   "name": "@teb-ooo/web",
-  "version": "0.2.0",
-  "description": "Non-visual frontend glue for factory apps: typed API client, auth hooks, SSE, forms, formatters.",
+  "version": "0.3.0",
+  "description": "Non-visual frontend glue for playground apps: typed API client, auth hooks, SSE, forms, formatters.",
   "type": "module",
   "license": "UNLICENSED",
   "repository": {
@@ -35,7 +35,7 @@
     "test": "vitest run",
     "gen:fixture": "openapi-typescript test/fixtures/openapi.json -o test/fixtures/schema.d.ts",
     "prepack": "npm run build",
-    "check:release-age": "node /srv/factory/rules/rules/tools/check-release-age.mjs ."
+    "check:release-age": "node /srv/playground/rules/rules/tools/check-release-age.mjs ."
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.5"

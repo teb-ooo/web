@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fmtBytes, fmtDate, fmtDateTime, fmtNumber, fmtRelative } from "../src/fmt.js";
-import { setFactory } from "../src/testing.js";
+import { setPlayground } from "../src/testing.js";
 
 const T = new Date("2026-09-29T06:30:00Z");
 
-describe("fmt defaults (no window.__FACTORY__)", () => {
+describe("fmt defaults (no window.__PLAYGROUND__)", () => {
   it("uses en-US and UTC", () => {
     expect(fmtDate(T)).toBe("Sep 29, 2026");
     expect(fmtDateTime(T)).toBe("Sep 29, 2026, 6:30 AM");
@@ -21,19 +21,19 @@ describe("fmt defaults (no window.__FACTORY__)", () => {
   });
 });
 
-describe("fmt with locale and timezone from window.__FACTORY__", () => {
+describe("fmt with locale and timezone from window.__PLAYGROUND__", () => {
   it("applies timezone", () => {
-    setFactory({ timezone: "America/Los_Angeles" });
+    setPlayground({ timezone: "America/Los_Angeles" });
     expect(fmtDateTime(T)).toBe("Sep 28, 2026, 11:30 PM");
     expect(fmtDate(T)).toBe("Sep 28, 2026");
   });
   it("applies locale", () => {
-    setFactory({ locale: "de-DE" });
+    setPlayground({ locale: "de-DE" });
     expect(fmtNumber(1234567.891)).toBe("1.234.567,891");
     expect(fmtDate(T)).toBe("29.09.2026");
   });
   it("falls back for invalid locale/timezone", () => {
-    setFactory({ locale: "not a locale!!", timezone: "Mars/Olympus" });
+    setPlayground({ locale: "not a locale!!", timezone: "Mars/Olympus" });
     expect(fmtDate(T)).toBe("Sep 29, 2026");
   });
 });
@@ -56,13 +56,13 @@ describe("fmtRelative with a fixed clock", () => {
     vi.useRealTimers();
   });
   it("respects locale", () => {
-    setFactory({ locale: "fr-FR" });
+    setPlayground({ locale: "fr-FR" });
     expect(fmtRelative(at(-3 * 3600_000), now)).toBe("il y a 3 heures");
   });
 });
 
 describe("fmtBytes", () => {
-  beforeEach(() => setFactory({}));
+  beforeEach(() => setPlayground({}));
   afterEach(() => undefined);
   it("scales in SI units", () => {
     expect(fmtBytes(0)).toBe("0 byte");
