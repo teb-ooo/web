@@ -34,3 +34,24 @@ function NewItem() {
 Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer`, `sseResponse`, `problemResponse`.
 
 `playground` (from `window.__PLAYGROUND__`) exposes `{ appName, env, claudeSessionUrl, assistant, locale, timezone }`; `assistant` is a boolean, false when absent.
+
+## Live data
+
+`useLiveQueries` keeps the generated query hooks current from a server stream (SSE), so a screen changes within a second or two when someone else changes the data, with no reload.
+
+```tsx
+import { matchesPaths, useLiveQueries } from "@teb-ooo/web";
+
+function Live() {
+  const { status } = useLiveQueries({ url: "/api/work/stream", invalidate: ["/api/work/"] }); // or matchesPaths([...]) or any predicate
+  return <span>{status}</span>; // "live" | "reconnecting" | "off"
+}
+```
+
+- Each event marks the matching cached queries stale (the open lists, pages and detail panes refetch); events within `debounceMs` (default 300) become one refetch. `onEvent(data, meta)` may return `false` to ignore an event.
+- `matchesPaths(["/api/work/"])` matches the keys the generated hooks build, `[method, path, init]`, by the path template's prefix. `invalidate` also takes a predicate over the query.
+- The stream is open only while the tab is visible. Whenever it (re)opens after the first time, a dropped connection or a hidden tab, everything matching is invalidated once, since events may have been missed. Event ids are opaque; `Last-Event-ID` is sent on reconnect as an optimisation only.
+- A server that answers 503 or 404 is retried with backoff (up to 30s) and the status stays `reconnecting`; a 401 sends the browser to sign in. `status` is `off` only when `enabled` is false, there is no `url`, or the tab is hidden (`paused`).
+- It never patches the cache; it only says what is stale.
+
+Releasing: bump the version, test, tag `vX.Y.Z`, push, `scripts/publish.sh` (the same routine as `@teb-ooo/ui`; it needs `UI_LIB_NPM_PASSWORD`). Check that packages depending on this one still allow the new version first.

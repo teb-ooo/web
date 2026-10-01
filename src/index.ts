@@ -36,6 +36,14 @@ export {
   type EventStreamOptions,
   type StreamStatus,
 } from "./event-stream.js";
+export {
+  useLiveQueries,
+  matchesPaths,
+  type LiveQueries,
+  type LiveQueriesOptions,
+  type LiveStatus,
+  type QueryMatcher,
+} from "./live-queries.js";
 export { createSseParser, type SseMessage, type SseParser } from "./sse.js";
 export {
   createBodyValidator,
