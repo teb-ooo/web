@@ -37,21 +37,24 @@ Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlaygrou
 
 ## Live data
 
-`useLiveQueries` keeps the generated query hooks current from a server stream (SSE), so a screen changes within a second or two when someone else changes the data, with no reload.
+`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream (WEB-50, design in the shared docs `live-data.md`), so a screen changes within a second or two when someone else changes the data, with no reload.
 
 ```tsx
-import { matchesPaths, useLiveQueries } from "@teb-ooo/web";
+import { useLive } from "@teb-ooo/web";
 
-function Live() {
-  const { status } = useLiveQueries({ url: "/api/work/stream", invalidate: ["/api/work/"] }); // or matchesPaths([...]) or any predicate
-  return <span>{status}</span>; // "live" | "reconnecting" | "off"
+function Header() {
+  const { status } = useLive(); // once, at the root; status: "live" | "reconnecting" | "degraded" | "off"
+  return <LiveIndicator status={status} />; // from @teb-ooo/ui
 }
 ```
 
-- Each event marks the matching cached queries stale (the open lists, pages and detail panes refetch); events within `debounceMs` (default 300) become one refetch. `onEvent(data, meta)` may return `false` to ignore an event.
-- `matchesPaths(["/api/work/"])` matches the keys the generated hooks build, `[method, path, init]`, by the path template's prefix. `invalidate` also takes a predicate over the query.
-- The stream is open only while the tab is visible. Whenever it (re)opens after the first time, a dropped connection or a hidden tab, everything matching is invalidated once, since events may have been missed. Event ids are opaque; `Last-Event-ID` is sent on reconnect as an optimisation only.
-- A server that answers 503 or 404 is retried with backoff (up to 30s) and the status stays `reconnecting`; a 401 sends the browser to sign in. `status` is `off` only when `enabled` is false, there is no `url`, or the tab is hidden (`paused`).
-- It never patches the cache; it only says what is stale.
+- Events say only which resource changed: `event: change`, `data: {"resource":"widgets","version":"..."}`. The queries of that resource are marked stale and refetch through the normal API operation, so authorisation stays the API's. The resource of a query is the first path segment after `/api/` (`widgets` covers `/api/widgets` and `/api/widgets/{id}`); map resources that do not follow the convention with `resources: { beads: ["/api/work/"] }`. An event naming no resource refreshes everything under `paths` (default `["/api/"]`).
+- Events within `debounceMs` (default 300) become one refetch. `onEvent(data, meta)` may return `false` to ignore an event.
+- The stream is open only while the tab is visible. Every (re)open after the first, a dropped connection or a tab shown again, refreshes everything after a random delay of 0 to `jitterMs` (default 2000), so a deploy does not make every tab refetch at once.
+- Status: `live`; `reconnecting` (any non-2xx except 401 is retried with backoff up to 30s); `degraded` (the server sent a `degraded` event: a source it relays is down, so changes may be missed until the next change); `off` (disabled, hidden tab, or a test browser). A 401 sends the browser to sign in.
+- It is off when `navigator.webdriver` is true (Playwright, so `networkidle` settles) or the page has `?live=0`. `force: true` or `?live=1` turns it on, for the one dedicated e2e.
+- There is no polling unless you ask for it: `pollWhenNotLiveMs: 30000` refreshes the `paths` queries at that interval while the stream is not live.
+- Cursor-paged lists built with `useInfiniteQuery` refetch every page loaded so far when invalidated, so a long list costs one request per page it has loaded; keep `pages` bounded (`maxPages`) or prefer a first-page list plus "load more" for screens that stay live for long.
+- `useLive` is built on `useLiveQueries({ url, invalidate, invalidateFor?, ... })` and `matchesPaths(["/api/work/"])`, which are exported for streams with their own shape. Neither patches the cache; they only say what is stale.
 
 Releasing: bump the version, test, tag `vX.Y.Z`, push, `scripts/publish.sh` (the same routine as `@teb-ooo/ui`; it needs `UI_LIB_NPM_PASSWORD`). Check that packages depending on this one still allow the new version first.

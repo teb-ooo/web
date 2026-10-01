@@ -36,9 +36,11 @@ export {
   type EventStreamOptions,
   type StreamStatus,
 } from "./event-stream.js";
+export { useLive, resourceOfPath, type LiveOptions } from "./live.js";
 export {
   useLiveQueries,
   matchesPaths,
+  type LiveEvent,
   type LiveQueries,
   type LiveQueriesOptions,
   type LiveStatus,
