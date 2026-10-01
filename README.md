@@ -94,3 +94,7 @@ The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so
 - `platformDomain()`, `platformUrl(app, path?)`: the platform domain comes from `window.__PLAYGROUND__.platform_domain` when the server sends it, otherwise from the current host without its first label (`ui-staging.teb.ooo` gives `teb.ooo`); `null` on localhost. `playground.platformDomain` is the raw field.
 - `LOGOUT_PATH` (`/auth/logout`): sign out is a full-page GET navigation.
 - `useLiveStatus()`: the status of the screen's live stream (`live`, `degraded`, `reconnecting`, `off`) for the bar's dot. `useLive` and `useLiveQueries` report to it by themselves; an app calls nothing.
+
+## Signed-out check without a failed request (0.7.1)
+
+`useUser` / `fetchUser` ask `/auth/me?optional=1`. A server on playground-go 0.7.2 or newer answers 200 `{"anonymous":true,...}` when nobody is signed in, which is treated as signed out (`user: null`), so the browser logs no failed request on a sign-in page. An older server ignores the parameter and answers 401, which still means signed out. `AuthOptions.optional: false` asks plain `/auth/me`.

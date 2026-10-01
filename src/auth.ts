@@ -19,21 +19,29 @@ export interface AuthOptions {
   fetch?: typeof globalThis.fetch;
   /** Default "/auth/me". */
   mePath?: string;
+  /**
+   * Ask `/auth/me?optional=1`, which answers 200 `{"anonymous":true}` when nobody is signed in instead of a 401 the
+   * browser logs as a failed request (playground-go 0.7.2). An older server ignores it and answers 401, which still
+   * means signed out. Default true.
+   */
+  optional?: boolean;
 }
 
 export const ME_QUERY_KEY = ["playground", "auth", "me"] as const;
 
-/** Fetches the current user. 401 resolves to `null`; it never redirects. Other failures throw ApiError. */
+/** Fetches the current user. 401, or a 200 with `anonymous: true`, resolves to `null`; it never redirects. Other failures throw ApiError. */
 export async function fetchUser(opts: AuthOptions = {}): Promise<User | null> {
   const doFetch = opts.fetch ?? globalThis.fetch;
   const url = new URL(opts.mePath ?? "/auth/me", opts.baseUrl ?? defaultBaseUrl());
+  if (opts.optional !== false && !url.searchParams.has("optional")) url.searchParams.set("optional", "1");
   const res = await doFetch(url, {
     credentials: "include",
     headers: { Accept: "application/json", [REQUEST_ID_HEADER]: newRequestId() },
   });
   if (res.status === 401) return null;
   await throwIfNotOk(res);
-  return (await res.json()) as User;
+  const body = (await res.json()) as User & { anonymous?: boolean };
+  return body.anonymous === true ? null : body;
 }
 
 /** Query options for the current user: fetched once, cached forever (invalidate `ME_QUERY_KEY` after login/logout). */

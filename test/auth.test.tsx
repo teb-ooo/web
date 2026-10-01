@@ -35,6 +35,27 @@ describe("useUser / useIsAdmin", () => {
     expect(window.location.pathname).toBe("/");
   });
 
+  it("asks for the optional answer and treats anonymous: true as signed out", async () => {
+    let query = "";
+    server.use(
+      http.get(ME, ({ request }) => {
+        query = new URL(request.url).search;
+        return HttpResponse.json({ anonymous: true, subject: "", email: "", username: "", groups: [], is_admin: false });
+      }),
+    );
+    renderWithProviders(createElement(Probe));
+    await waitFor(() => expect(screen.getByTestId("out").textContent).toBe("anon|false"));
+    expect(query).toBe("?optional=1");
+  });
+
+  it("optional: false asks plain /auth/me", async () => {
+    let query = "?";
+    server.use(http.get(ME, ({ request }) => ((query = new URL(request.url).search), problemResponse(401))));
+    const { fetchUser } = await import("../src/auth.js");
+    expect(await fetchUser({ baseUrl: "http://localhost:3000", optional: false })).toBeNull();
+    expect(query).toBe("");
+  });
+
   it("reads /auth/me once across many consumers and re-renders", async () => {
     let hits = 0;
     let credentials: string | null = null;
