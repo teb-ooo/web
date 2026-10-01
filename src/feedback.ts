@@ -28,6 +28,11 @@ export interface FeedbackOptions {
   endpoint?: string;
   /** Turn it off without unmounting. Default true. */
   enabled?: boolean;
+  /**
+   * Allow it in a browser that reports `navigator.webdriver` (an automated or embedded browser, such as an in-app
+   * pane). Also switched on by `?feedback=1` in the address. The default keeps it out of test browsers.
+   */
+  force?: boolean;
   /** Test hooks. */
   fetch?: typeof globalThis.fetch;
 }
@@ -116,7 +121,8 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
   const { endpoint = "/_playground/feedback", enabled = true } = options;
   const { user } = useUser();
   const person = user !== null && (user.is_admin || user.is_owner === true);
-  const available = enabled && person && !(typeof navigator !== "undefined" && navigator.webdriver === true);
+  const forced = options.force === true || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("feedback") === "1");
+  const available = enabled && person && (forced || !(typeof navigator !== "undefined" && navigator.webdriver === true));
 
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState("");

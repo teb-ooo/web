@@ -85,6 +85,16 @@ describe("useFeedback", () => {
     const wd = renderHook(() => useFeedback(), { wrapper: wrapper() });
     await new Promise((r) => setTimeout(r, 30));
     expect(wd.result.current.available).toBe(false);
+    wd.unmount();
+
+    // ...unless forced, for an embedded browser that reports webdriver
+    const forcedByOption = renderHook(() => useFeedback({ force: true }), { wrapper: wrapper() });
+    await waitFor(() => expect(forcedByOption.result.current.available).toBe(true));
+    forcedByOption.unmount();
+    window.history.replaceState(null, "", "/?feedback=1");
+    const forcedByUrl = renderHook(() => useFeedback(), { wrapper: wrapper() });
+    await waitFor(() => expect(forcedByUrl.result.current.available).toBe(true));
+    window.history.replaceState(null, "", "/");
   });
 
   it("sends the text, the context and the screenshot as multipart, then reports the bead", async () => {

@@ -80,7 +80,7 @@ function Root() {
 }
 ```
 
-- `available` is true only for the superadmin (`is_admin`) or the app's owner (`is_owner`, from `/auth/me`), and never under a test browser (`navigator.webdriver`).
+- `available` is true only for the superadmin (`is_admin`) or the app's owner (`is_owner`, from `/auth/me`), and not in a browser that reports `navigator.webdriver` (test browsers; some embedded or automated browsers do too). `force: true` or `?feedback=1` in the address overrides that. A missing `is_owner` counts as false.
 - The panel takes free text, an optional picked element (selector, role, visible text, rectangle; click it on the page, Escape cancels), and an optional screenshot with a preview (html-to-image, loaded only when asked: png, else jpeg, at most 5 MB, nothing masked, the panel itself left out). A line lists what is sent besides the text: the route, the last 20 console errors (kept from the moment the hook mounts), the viewport and the user agent.
 - `submit()` posts multipart to `/_playground/feedback` (`text`, `context` as JSON, optional `screenshot`) and answers `{ bead, agent, status }`. A failure keeps a local draft (the text and the picked element), offered again the next time the panel opens.
 
