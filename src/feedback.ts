@@ -136,7 +136,6 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
   useEffect(() => (available ? captureConsoleErrors() : undefined), [available]);
 
   const dropShot = useCallback(() => {
-    if (shotRef.current) URL.revokeObjectURL(shotRef.current.url);
     shotRef.current = null;
     setShot(null);
   }, []);
@@ -176,7 +175,6 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     setShotError(null);
     try {
       const s = await captureScreenshot();
-      if (shotRef.current) URL.revokeObjectURL(shotRef.current.url);
       shotRef.current = s;
       setShot(s);
     } catch (e) {

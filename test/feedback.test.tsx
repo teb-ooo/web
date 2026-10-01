@@ -21,8 +21,6 @@ function wrapper() {
 beforeEach(() => {
   window.localStorage.clear();
   clearConsoleErrors();
-  URL.createObjectURL = () => "blob:preview";
-  URL.revokeObjectURL = () => undefined;
 });
 afterEach(() => {
   Object.defineProperty(navigator, "webdriver", { configurable: true, value: false });
@@ -106,6 +104,7 @@ describe("useFeedback", () => {
     act(() => result.current.setText("The header overlaps on a phone"));
     act(() => result.current.setIncludeScreenshot(true));
     await waitFor(() => expect(result.current.screenshot).not.toBeNull());
+    expect(result.current.screenshot?.url.startsWith("data:")).toBe(true);
     expect(result.current.sends.join(" ")).toContain("A screenshot");
     await act(async () => result.current.submit());
     await waitFor(() => expect(result.current.status, String(result.current.error)).toBe("sent"));

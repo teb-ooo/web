@@ -122,10 +122,19 @@ export const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 
 export interface Screenshot {
   blob: Blob;
-  /** An object URL for the preview; revoke it when done. */
+  /** A data URL for the preview (the page's Content-Security-Policy allows data: images, not blob: ones). */
   url: string;
   type: string;
   size: number;
+}
+
+function toDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("The screenshot could not be read."));
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**
@@ -142,7 +151,7 @@ export async function captureScreenshot(): Promise<Screenshot> {
   ];
   for (const a of attempts) {
     const blob = await toBlob(document.documentElement, { filter, type: a.type, pixelRatio: a.pixelRatio, ...(a.quality ? { quality: a.quality } : {}), cacheBust: true });
-    if (blob && blob.size <= MAX_SCREENSHOT_BYTES) return { blob, url: URL.createObjectURL(blob), type: blob.type || a.type, size: blob.size };
+    if (blob && blob.size <= MAX_SCREENSHOT_BYTES) return { blob, url: await toDataUrl(blob), type: blob.type || a.type, size: blob.size };
   }
   throw new Error("The screenshot is larger than 5 MB.");
 }
