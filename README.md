@@ -85,3 +85,12 @@ function Root() {
 - `submit()` posts multipart to `/_playground/feedback` (`text`, `context` as JSON, optional `screenshot`) and answers `{ bead, agent, status }`. A failure keeps a local draft (the text and the picked element), offered again the next time the panel opens.
 
 Releasing: bump the version, test, tag `vX.Y.Z`, push, `scripts/publish.sh` (the same routine as `@teb-ooo/ui`; it needs `UI_LIB_NPM_PASSWORD`). Check that packages depending on this one still allow the new version first.
+
+## Platform shell data (0.7.0)
+
+The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so the list can grow without apps changing code.
+
+- `platformLinks()` returns the links every app's Cmd+K carries under its own group: My profile (id), Go to dashboard (ah), Go to work tracker (bd), Go to design system (ui), each as `{ id, title, keywords, href }`. Add a new platform link to `LINK_SPECS` in `src/platform.ts` and every app has it after upgrading.
+- `platformDomain()`, `platformUrl(app, path?)`: the platform domain comes from `window.__PLAYGROUND__.platform_domain` when the server sends it, otherwise from the current host without its first label (`ui-staging.teb.ooo` gives `teb.ooo`); `null` on localhost. `playground.platformDomain` is the raw field.
+- `LOGOUT_PATH` (`/auth/logout`): sign out is a full-page GET navigation.
+- `useLiveStatus()`: the status of the screen's live stream (`live`, `degraded`, `reconnecting`, `off`) for the bar's dot. `useLive` and `useLiveQueries` report to it by themselves; an app calls nothing.

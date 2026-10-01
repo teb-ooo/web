@@ -1,0 +1,67 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { clearLiveStatus, publishLiveStatus } from "../src/live-status";
+import { LOGOUT_PATH, platformDomain, platformLinks, platformUrl } from "../src/platform";
+import { useLiveStatus } from "../src";
+
+afterEach(() => {
+  delete window.__PLAYGROUND__;
+});
+
+describe("platformDomain", () => {
+  it.each([
+    ["ui-staging.teb.ooo", "teb.ooo"],
+    ["ui.teb.ooo", "teb.ooo"],
+    ["localhost", null],
+    ["127.0.0.1", null],
+    ["teb.ooo", null],
+    ["", null],
+  ])("derives from the host %j", (host, want) => {
+    expect(platformDomain(host)).toBe(want);
+  });
+  it("prefers the domain the server sends", () => {
+    window.__PLAYGROUND__ = { platform_domain: "example.test" };
+    expect(platformDomain("localhost")).toBe("example.test");
+    expect(platformUrl("id", "/profile")).toBe("https://id.example.test/profile");
+  });
+});
+
+describe("platformLinks", () => {
+  it("lists the profile, dashboard, tracker and design system on the platform domain", () => {
+    window.__PLAYGROUND__ = { platform_domain: "example.test" };
+    const links = platformLinks();
+    expect(links.map((l) => l.href)).toEqual([
+      "https://id.example.test/profile",
+      "https://ah.example.test/",
+      "https://bd.example.test/",
+      "https://ui.example.test/",
+    ]);
+    expect(new Set(links.map((l) => l.id)).size).toBe(links.length);
+  });
+  it("is empty where the domain is unknown", () => {
+    expect(platformLinks()).toEqual([]);
+  });
+  it("signs out through the app's own route", () => {
+    expect(LOGOUT_PATH).toBe("/auth/logout");
+  });
+});
+
+describe("useLiveStatus", () => {
+  it("is the best status of the mounted streams and off with none", () => {
+    const { result } = renderHook(() => useLiveStatus());
+    expect(result.current).toBe("off");
+    act(() => publishLiveStatus("a", "reconnecting"));
+    expect(result.current).toBe("reconnecting");
+    act(() => publishLiveStatus("b", "degraded"));
+    expect(result.current).toBe("degraded");
+    act(() => publishLiveStatus("c", "live"));
+    expect(result.current).toBe("live");
+    act(() => {
+      clearLiveStatus("c");
+      clearLiveStatus("b");
+    });
+    expect(result.current).toBe("reconnecting");
+    act(() => clearLiveStatus("a"));
+    expect(result.current).toBe("off");
+  });
+});

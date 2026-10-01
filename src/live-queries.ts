@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Query } from "@tanstack/react-query";
 import { runEventStream } from "./event-stream.js";
+import { clearLiveStatus, publishLiveStatus } from "./live-status.js";
 import type { BackoffOptions, EventMeta, EventStreamOptions, StreamStatus } from "./event-stream.js";
 
 /** Decides which cached queries an event makes stale. */
@@ -178,5 +179,12 @@ export function useLiveQueries(options: LiveQueriesOptions): LiveQueries {
     };
   }, [url, enabled, visible, debounceMs, queryClient]);
 
-  return { status: streamStatus === "live" && degraded ? "degraded" : streamStatus, paused: !visible };
+  const status: LiveStatus = streamStatus === "live" && degraded ? "degraded" : streamStatus;
+  const id = useId();
+  // The platform bar's dot shows what the screen's stream reports.
+  useEffect(() => {
+    publishLiveStatus(id, status);
+  }, [id, status]);
+  useEffect(() => () => clearLiveStatus(id), [id]);
+  return { status, paused: !visible };
 }
