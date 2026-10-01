@@ -9,6 +9,8 @@ export interface User {
   picture?: string;
   groups: string[];
   is_admin: boolean;
+  /** True when the person is the app's owner (their email equals APP_OWNER). Sent by playground-go auth versions that have it. */
+  is_owner?: boolean;
 }
 
 export interface AuthOptions {

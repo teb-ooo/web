@@ -36,6 +36,16 @@ export {
   type EventStreamOptions,
   type StreamStatus,
 } from "./event-stream.js";
+export {
+  useFeedback,
+  type FeedbackContext,
+  type FeedbackController,
+  type FeedbackOptions,
+  type FeedbackResult,
+  type FeedbackStatus,
+  type PickedElement,
+} from "./feedback.js";
+export { describeElement, recentConsoleErrors, selectorOf, MAX_SCREENSHOT_BYTES } from "./feedback-capture.js";
 export { useLive, resourceOfPath, type LiveOptions } from "./live.js";
 export {
   useLiveQueries,

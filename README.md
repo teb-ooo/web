@@ -64,4 +64,24 @@ function Header() {
 - **Testing.** An open stream means Playwright's `networkidle` never arrives. `useLive()` stays off under a test browser (`navigator.webdriver`, or `?live=0`) for that reason; if you use `useLiveQueries` directly, cut the stream in the smoke test (`page.route("**/stream", (r) => r.abort("aborted"))`) except in the one test that exercises it.
 - `status` is `reconnecting` while the server answers 503 or 429, with backoff.
 
+## Feedback
+
+`useFeedback()` is the state and actions behind the feedback panel (`FeedbackPanel` in `@teb-ooo/ui`, a dialog). It is reached only through Cmd+K: `useFeedbackCommand(feedback)` from `@teb-ooo/ui/cmdk` registers "Send feedback". No header button.
+
+```tsx
+import { useFeedback } from "@teb-ooo/web";
+import { FeedbackPanel } from "@teb-ooo/ui";
+import { useFeedbackCommand } from "@teb-ooo/ui/cmdk";
+
+function Root() {
+  const feedback = useFeedback();   // once, inside the router and the query provider
+  useFeedbackCommand(feedback);     // "Send feedback" in Cmd+K, only when feedback.available
+  return <FeedbackPanel feedback={feedback} />;
+}
+```
+
+- `available` is true only for the superadmin (`is_admin`) or the app's owner (`is_owner`, from `/auth/me`), and never under a test browser (`navigator.webdriver`).
+- The panel takes free text, an optional picked element (selector, role, visible text, rectangle; click it on the page, Escape cancels), and an optional screenshot with a preview (html-to-image, loaded only when asked: png, else jpeg, at most 5 MB, nothing masked, the panel itself left out). A line lists what is sent besides the text: the route, the last 20 console errors (kept from the moment the hook mounts), the viewport and the user agent.
+- `submit()` posts multipart to `/_playground/feedback` (`text`, `context` as JSON, optional `screenshot`) and answers `{ bead, agent, status }`. A failure keeps a local draft (the text and the picked element), offered again the next time the panel opens.
+
 Releasing: bump the version, test, tag `vX.Y.Z`, push, `scripts/publish.sh` (the same routine as `@teb-ooo/ui`; it needs `UI_LIB_NPM_PASSWORD`). Check that packages depending on this one still allow the new version first.
