@@ -57,4 +57,11 @@ function Header() {
 - Cursor-paged lists built with `useInfiniteQuery` refetch every page loaded so far when invalidated, so a long list costs one request per page it has loaded; keep `pages` bounded (`maxPages`) or prefer a first-page list plus "load more" for screens that stay live for long.
 - `useLive` is built on `useLiveQueries({ url, invalidate, invalidateFor?, ... })` and `matchesPaths(["/api/work/"])`, which are exported for streams with their own shape. Neither patches the cache; they only say what is stale.
 
+### Patterns (from bd, the first real use)
+
+- **A snapshot at connect.** A server may send one `change` per project or resource when the stream opens. If the screen has just loaded that data, the refetch is wasted: remember the last `version` you saw per resource in `onEvent` and return `false` for the first sighting (and for an unchanged version), so nothing refetches at connect.
+- **Deciding what an event touches.** `invalidate` may be a predicate over the query, and it can read a ref that `onEvent` sets: that is how one screen refreshes everything under `/api/work/` for one kind of event and only a counts query for another. With `useLive()` use `invalidateFor`-style narrowing through `resources`, or fall back to `useLiveQueries` for this.
+- **Testing.** An open stream means Playwright's `networkidle` never arrives. `useLive()` stays off under a test browser (`navigator.webdriver`, or `?live=0`) for that reason; if you use `useLiveQueries` directly, cut the stream in the smoke test (`page.route("**/stream", (r) => r.abort("aborted"))`) except in the one test that exercises it.
+- `status` is `reconnecting` while the server answers 503 or 429, with backoff.
+
 Releasing: bump the version, test, tag `vX.Y.Z`, push, `scripts/publish.sh` (the same routine as `@teb-ooo/ui`; it needs `UI_LIB_NPM_PASSWORD`). Check that packages depending on this one still allow the new version first.
