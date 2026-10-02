@@ -102,3 +102,7 @@ The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so
 `useHasLiveStream()` (0.7.2) says whether any screen has a live stream mounted; the platform bar shows its dot only then, so an app with no live data shows no indicator.
 
 `useFeedback` opens straight into picking an element (0.7.3): open, click the element, type, Enter. Escape while picking skips the pick. `pickOnOpen: false` opens to the text instead.
+
+## Agent status (0.7.4)
+
+`useAgentStatus()` polls the platform's `GET /_playground/agent` on the app's own origin every 15 s while the tab is visible and returns `{agent, status, since, summary}` with `status` one of `working`, `idle`, `offline`, `logged_out`; the platform bar's dot on the agent button follows it. Only the superadmin or the app's owner can read it; for anyone else, in a test browser (unless `force`), or when the route is missing or fails, it returns `null` and the bar draws no dot.
