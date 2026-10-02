@@ -4,6 +4,7 @@ import type { LiveStatus } from "./live-queries.js";
 const statuses = new Map<string, LiveStatus>();
 const listeners = new Set<() => void>();
 let current: LiveStatus = "off";
+let registered = false;
 
 function aggregate(): LiveStatus {
   const all = [...statuses.values()];
@@ -13,8 +14,10 @@ function aggregate(): LiveStatus {
 
 function changed(): void {
   const next = aggregate();
-  if (next === current) return;
+  const has = statuses.size > 0;
+  if (next === current && has === registered) return;
   current = next;
+  registered = has;
   for (const l of listeners) l();
 }
 
@@ -41,5 +44,20 @@ export function useLiveStatus(): LiveStatus {
     },
     () => current,
     () => "off",
+  );
+}
+
+/**
+ * Whether any screen has a live stream mounted (it called `useLive` or `useLiveQueries`, enabled or not). The platform
+ * bar shows its dot only then: an app with no live data has nothing to report.
+ */
+export function useHasLiveStream(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    () => registered,
+    () => false,
   );
 }

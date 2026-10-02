@@ -69,5 +69,5 @@ export { useForm, type FieldBinding, type UseFormOptions, type UseFormResult } f
 export { fmtDate, fmtDateTime, fmtRelative, fmtNumber, fmtBytes, type DateInput } from "./fmt.js";
 export { playground, getPlayground, type PlaygroundConfig, type PlaygroundRaw } from "./playground.js";
 export { loginUrl, redirectToLogin, type RedirectFn } from "./request.js";
-export { useLiveStatus } from "./live-status.js";
+export { useHasLiveStream, useLiveStatus } from "./live-status.js";
 export { LOGOUT_PATH, platformDomain, platformLinks, platformUrl, type PlatformLink } from "./platform.js";

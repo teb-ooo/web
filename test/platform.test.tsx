@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { clearLiveStatus, publishLiveStatus } from "../src/live-status";
 import { LOGOUT_PATH, platformDomain, platformLinks, platformUrl } from "../src/platform";
-import { useLiveStatus } from "../src";
+import { useHasLiveStream, useLiveStatus } from "../src";
 
 afterEach(() => {
   delete window.__PLAYGROUND__;
@@ -63,5 +63,16 @@ describe("useLiveStatus", () => {
     expect(result.current).toBe("reconnecting");
     act(() => clearLiveStatus("a"));
     expect(result.current).toBe("off");
+  });
+});
+
+describe("useHasLiveStream", () => {
+  it("is true only while a stream is registered", () => {
+    const { result } = renderHook(() => useHasLiveStream());
+    expect(result.current).toBe(false);
+    act(() => publishLiveStatus("x", "off"));
+    expect(result.current).toBe(true);
+    act(() => clearLiveStatus("x"));
+    expect(result.current).toBe(false);
   });
 });
