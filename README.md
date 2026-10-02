@@ -100,3 +100,5 @@ The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so
 `useUser` / `fetchUser` ask `/auth/me?optional=1`. A server on playground-go 0.7.2 or newer answers 200 `{"anonymous":true,...}` when nobody is signed in, which is treated as signed out (`user: null`), so the browser logs no failed request on a sign-in page. An older server ignores the parameter and answers 401, which still means signed out. `AuthOptions.optional: false` asks plain `/auth/me`.
 
 `useHasLiveStream()` (0.7.2) says whether any screen has a live stream mounted; the platform bar shows its dot only then, so an app with no live data shows no indicator.
+
+`useFeedback` opens straight into picking an element (0.7.3): open, click the element, type, Enter. Escape while picking skips the pick. `pickOnOpen: false` opens to the text instead.

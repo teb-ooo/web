@@ -157,6 +157,21 @@ describe("useFeedback", () => {
     expect(b.result.current.restoredDraft).toBe(true);
   });
 
+  it("opens straight into picking an element, and pickOnOpen: false opens to the text", async () => {
+    server.use(me({ is_admin: true }));
+    const first = renderHook(() => useFeedback(), { wrapper: wrapper() });
+    await waitFor(() => expect(first.result.current.available).toBe(true));
+    act(() => first.result.current.open());
+    expect(first.result.current.isOpen).toBe(true);
+    expect(first.result.current.picking).toBe(true);
+    first.unmount();
+    const second = renderHook(() => useFeedback({ pickOnOpen: false }), { wrapper: wrapper() });
+    await waitFor(() => expect(second.result.current.available).toBe(true));
+    act(() => second.result.current.open());
+    expect(second.result.current.isOpen).toBe(true);
+    expect(second.result.current.picking).toBe(false);
+  });
+
   it("picks an element by clicking it, and Escape cancels", async () => {
     server.use(me({ is_admin: true }));
     document.body.innerHTML = '<button id="target">Target</button>';

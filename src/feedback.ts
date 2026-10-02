@@ -33,6 +33,12 @@ export interface FeedbackOptions {
    * pane). Also switched on by `?feedback=1` in the address. The default keeps it out of test browsers.
    */
   force?: boolean;
+  /**
+   * Open straight into picking an element: the page is highlighted and a click chooses it, then the text. The send is
+   * two clicks and a key: open, click the element, type and press Enter. Escape while picking skips the pick and goes
+   * to the text. Default true.
+   */
+  pickOnOpen?: boolean;
   /** Test hooks. */
   fetch?: typeof globalThis.fetch;
 }
@@ -118,7 +124,7 @@ async function problemText(res: Response): Promise<string> {
  * from `@teb-ooo/ui/cmdk`.
  */
 export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
-  const { endpoint = "/_playground/feedback", enabled = true } = options;
+  const { endpoint = "/_playground/feedback", enabled = true, pickOnOpen = true } = options;
   const { user } = useUser();
   const person = user !== null && (user.is_admin || user.is_owner === true);
   const forced = options.force === true || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("feedback") === "1");
@@ -169,7 +175,8 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
       setRestoredDraft(true);
     }
     setIsOpen(true);
-  }, [available, status, reset, text]);
+    if (pickOnOpen) setPicking(true);
+  }, [available, status, reset, text, pickOnOpen]);
   const close = useCallback(() => {
     setPicking(false);
     setIsOpen(false);
