@@ -36,6 +36,26 @@ export {
   type EventStreamOptions,
   type StreamStatus,
 } from "./event-stream.js";
+export {
+  useFeedback,
+  type FeedbackContext,
+  type FeedbackController,
+  type FeedbackOptions,
+  type FeedbackResult,
+  type FeedbackStatus,
+  type PickedElement,
+} from "./feedback.js";
+export { describeElement, recentConsoleErrors, selectorOf, MAX_SCREENSHOT_BYTES } from "./feedback-capture.js";
+export { useLive, resourceOfPath, type LiveOptions } from "./live.js";
+export {
+  useLiveQueries,
+  matchesPaths,
+  type LiveEvent,
+  type LiveQueries,
+  type LiveQueriesOptions,
+  type LiveStatus,
+  type QueryMatcher,
+} from "./live-queries.js";
 export { createSseParser, type SseMessage, type SseParser } from "./sse.js";
 export {
   createBodyValidator,
@@ -49,3 +69,5 @@ export { useForm, type FieldBinding, type UseFormOptions, type UseFormResult } f
 export { fmtDate, fmtDateTime, fmtRelative, fmtNumber, fmtBytes, type DateInput } from "./fmt.js";
 export { playground, getPlayground, type PlaygroundConfig, type PlaygroundRaw } from "./playground.js";
 export { loginUrl, redirectToLogin, type RedirectFn } from "./request.js";
+export { useHasLiveStream, useLiveStatus } from "./live-status.js";
+export { LOGOUT_PATH, platformDomain, platformLinks, platformUrl, type PlatformLink } from "./platform.js";

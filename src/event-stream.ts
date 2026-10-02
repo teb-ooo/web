@@ -68,6 +68,8 @@ export interface EventStreamOptions {
   /** Called with the login URL on a 401. Default `window.location.assign`. */
   redirect?: RedirectFn;
   requestId?: () => string;
+  /** Which failing HTTP statuses are retried with backoff. Default: 5xx, 408 and 429. */
+  retryOn?: (status: number) => boolean;
   /** Test hook: replaces the reconnect timer. */
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
@@ -165,7 +167,7 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
           redirectToLogin(r);
         }
         fail(apiErr);
-        if (!retryable(res.status)) {
+        if (!(options.retryOn ?? retryable)(res.status)) {
           cfg.setStatus("error");
           return;
         }
