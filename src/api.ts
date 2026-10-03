@@ -69,8 +69,8 @@ export function createApi<Paths extends {}>(opts: CreateApiOptions = {}): Api<Pa
   return { ...createQueryBindings(client), client };
 }
 
-/** Retry policy for QueryClient: never retry 4xx `ApiError`s, retry everything else up to 2 times. */
+/** Retry policy for QueryClient: never retry 4xx `ApiError`s, retry everything else once (after 500 ms, see `createQueryClient`). */
 export function shouldRetry(failureCount: number, error: unknown): boolean {
   if (isApiError(error) && error.status >= 400 && error.status < 500) return false;
-  return failureCount < 2;
+  return failureCount < 1;
 }

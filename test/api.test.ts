@@ -104,3 +104,13 @@ describe("createApi", () => {
     expect(r.data).toEqual({ items: [] });
   });
 });
+
+describe("ApiError.userMessage", () => {
+  it("is a sentence for a person", async () => {
+    const { ApiError } = await import("../src/api-error.js");
+    expect(new ApiError({ status: 500, title: "Internal Server Error", detail: "internal error" }).userMessage).toBe("The server could not do that. Try again in a moment.");
+    expect(new ApiError({ status: 422, title: "Unprocessable Entity", detail: "Rule text is too long." }).userMessage).toBe("Rule text is too long.");
+    expect(new ApiError({ status: 403, title: "Forbidden" }).userMessage).toBe("You may not do this.");
+    expect(new ApiError({ status: 409, title: "Conflict" }).userMessage).toBe("Conflict");
+  });
+});

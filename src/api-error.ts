@@ -54,6 +54,19 @@ export class ApiError extends Error implements ProblemDetails {
     }
   }
 
+  /**
+   * A sentence for a person: the server's detail on a 4xx that has one, else a plain sentence for the status
+   * ("The server could not do that. Try again in a moment."). `message` keeps the raw "Title: detail" for logs.
+   */
+  get userMessage(): string {
+    if (this.status >= 500) return "The server could not do that. Try again in a moment.";
+    if (this.status === 401) return "Sign in again to continue.";
+    if (this.status === 403) return "You may not do this.";
+    if (this.status === 404) return "Not found.";
+    if (this.detail !== "") return this.detail;
+    return this.title;
+  }
+
   static fromProblem(status: number, body: unknown, fallbackTitle?: string, requestId?: string): ApiError {
     const p: Record<string, unknown> = isRecord(body) ? body : {};
     const errors = Array.isArray(p.errors)
