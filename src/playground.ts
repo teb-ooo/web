@@ -5,8 +5,6 @@ export interface PlaygroundRaw {
   claude_session_url?: string;
   /** The platform domain (`teb.ooo`), when the server sends it. */
   platform_domain?: string;
-  /** true when the app enables the end-user assistant. */
-  assistant?: boolean;
   locale?: string;
   timezone?: string;
 }
@@ -18,8 +16,6 @@ export interface PlaygroundConfig {
   claudeSessionUrl: string;
   /** The platform domain, or "" when the server does not send it (`platformDomain()` then derives it from the host). */
   platformDomain: string;
-  /** true when the app enables the end-user assistant (`/assistant` route). false when absent. */
-  assistant: boolean;
   locale: string;
   timezone: string;
 }
@@ -68,7 +64,6 @@ export function getPlayground(): PlaygroundConfig {
     env: str(raw.env, ""),
     claudeSessionUrl: str(raw.claude_session_url, ""),
     platformDomain: str(raw.platform_domain, ""),
-    assistant: raw.assistant === true,
     locale: validLocale(str(raw.locale, DEFAULT_LOCALE)),
     timezone: validTimezone(str(raw.timezone, DEFAULT_TIMEZONE)),
   };
@@ -80,7 +75,6 @@ export const playground: Readonly<PlaygroundConfig> = Object.defineProperties({}
   env: { enumerable: true, get: () => getPlayground().env },
   claudeSessionUrl: { enumerable: true, get: () => getPlayground().claudeSessionUrl },
   platformDomain: { enumerable: true, get: () => getPlayground().platformDomain },
-  assistant: { enumerable: true, get: () => getPlayground().assistant },
   locale: { enumerable: true, get: () => getPlayground().locale },
   timezone: { enumerable: true, get: () => getPlayground().timezone },
 });

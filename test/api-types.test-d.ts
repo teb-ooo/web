@@ -46,7 +46,3 @@ describe("createApi<paths> infers from the generated schema", () => {
   });
 });
 
-// AssistantEvents mirrors the Go assistant SSE events (playground-go assistant.go): exactly these five names.
-import type { AssistantEvents } from "../src/index";
-expectTypeOf<keyof AssistantEvents>().toEqualTypeOf<"text" | "tool_call" | "tool_result" | "done" | "error">();
-expectTypeOf<AssistantEvents["error"]>().toEqualTypeOf<{ detail: string }>();

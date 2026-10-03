@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { ApiError } from "../src/api-error.js";
-import { backoffDelay, useEventStream, type AssistantEvents } from "../src/event-stream.js";
+import { backoffDelay, useEventStream } from "../src/event-stream.js";
+
+/** The events of the streams these tests feed. */
+interface AssistantEvents {
+  text: { text: string };
+  tool_call: { id: string; name: string; input: unknown };
+  tool_result: { id: string; content: unknown; is_error?: boolean };
+  done: { stop_reason?: string };
+  error: { detail: string };
+}
 import { HttpResponse, http, problemResponse, setupMswServer, sseResponse } from "../src/testing.js";
 
 const server = setupMswServer();

@@ -9,7 +9,6 @@ describe("playground", () => {
       env: "",
       claudeSessionUrl: "",
       platformDomain: "",
-      assistant: false,
       locale: "en-US",
       timezone: "UTC",
     });
@@ -21,7 +20,6 @@ describe("playground", () => {
       env: "staging",
       claude_session_url: "https://claude.ai/code/session_1",
       platform_domain: "teb.ooo",
-      assistant: true,
       locale: "en-GB",
       timezone: "Europe/London",
     });
@@ -30,7 +28,6 @@ describe("playground", () => {
       env: "staging",
       claudeSessionUrl: "https://claude.ai/code/session_1",
       platformDomain: "teb.ooo",
-      assistant: true,
       locale: "en-GB",
       timezone: "Europe/London",
     });
@@ -42,14 +39,6 @@ describe("playground", () => {
     expect(playground.appName).toBe("later");
   });
 
-  it("assistant is strictly boolean true, else false", () => {
-    for (const v of ["true", 1, null, undefined, false]) {
-      (window as unknown as { __PLAYGROUND__: unknown }).__PLAYGROUND__ = { assistant: v };
-      expect(getPlayground().assistant).toBe(false);
-    }
-    setPlayground({ assistant: true });
-    expect(playground.assistant).toBe(true);
-  });
 
   it("ignores junk values", () => {
     (window as unknown as { __PLAYGROUND__: unknown }).__PLAYGROUND__ = "junk";

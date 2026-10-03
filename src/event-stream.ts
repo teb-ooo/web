@@ -6,19 +6,6 @@ import { REQUEST_ID_HEADER, newRequestId, redirectToLogin, type RedirectFn } fro
 /** Map of event name to parsed `data` payload. */
 export type EventMap = object;
 
-/**
- * Events emitted by the Go `assistant` package (`POST /api/assistant/conversations/{id}/messages`).
- * The set and payload fields match `assistant.go` in playground-go (v0.1.2): `text`, `tool_call`, `tool_result`
- * (`is_error` only when true), `done` (`stop_reason`) and `error` (`detail`, a sentence for the user).
- */
-export interface AssistantEvents {
-  text: { text: string };
-  tool_call: { id: string; name: string; input: unknown };
-  tool_result: { id: string; content: unknown; is_error?: boolean };
-  done: { stop_reason?: string };
-  error: { detail: string };
-}
-
 export interface EventMeta<K extends string = string> {
   event: K;
   id?: string;
@@ -52,7 +39,7 @@ export function backoffDelay(attempt: number, o: BackoffOptions = {}): number {
 }
 
 export interface EventStreamOptions {
-  /** HTTP method. Default "GET" (auto-connects). Use "POST" for the assistant endpoint together with `send(body)`. */
+  /** HTTP method. Default "GET" (auto-connects). Use "POST" for an endpoint that answers a request body with a stream, together with `send(body)`. */
   method?: "GET" | "POST";
   /** Connect on mount / url change. Default: true for GET, false for POST. */
   autoConnect?: boolean;
@@ -125,7 +112,7 @@ interface RunConfig {
 
 /**
  * The transport: fetch + ReadableStream + a hand-written SSE parser, not EventSource.
- * EventSource cannot send a POST body or custom headers, and the assistant endpoint is a POST with an SSE response.
+ * EventSource cannot send a POST body or custom headers, and some endpoints are a POST with an SSE response.
  */
 export async function runEventStream(cfg: RunConfig): Promise<void> {
   const { signal, options } = cfg;
@@ -236,10 +223,10 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
 
 /**
  * SSE over fetch. GET mode connects on mount and reconnects with exponential backoff + jitter, resuming with
- * `Last-Event-ID`. POST mode (`method: "POST"`) streams the response of `send(body)`, as the assistant endpoint needs.
+ * `Last-Event-ID`. POST mode (`method: "POST"`) streams the response of `send(body)`.
  * Streams are aborted on unmount. Handler identity may change every render without reconnecting.
  */
-export function useEventStream<E extends EventMap = AssistantEvents>(
+export function useEventStream<E extends EventMap = Record<string, unknown>>(
   url: string | null | undefined,
   handlers: EventHandlers<E>,
   options: EventStreamOptions = {},

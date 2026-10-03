@@ -7,9 +7,9 @@ import type { PlaygroundRaw } from "./playground.js";
 
 export { http, HttpResponse, delay } from "msw";
 
-/** Sets `window.__PLAYGROUND__` (snake_case, as the Go spa package delivers it). Defaults: `assistant: false`. */
+/** Sets `window.__PLAYGROUND__` (snake_case, as the Go spa package delivers it). */
 export function setPlayground(raw: PlaygroundRaw = {}): void {
-  window.__PLAYGROUND__ = { assistant: false, ...raw };
+  window.__PLAYGROUND__ = { ...raw };
 }
 
 export function resetPlayground(): void {

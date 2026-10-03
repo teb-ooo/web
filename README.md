@@ -33,7 +33,7 @@ function NewItem() {
 
 Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer`, `sseResponse`, `problemResponse`.
 
-`playground` (from `window.__PLAYGROUND__`) exposes `{ appName, env, claudeSessionUrl, assistant, locale, timezone }`; `assistant` is a boolean, false when absent.
+`playground` (from `window.__PLAYGROUND__`) exposes `{ appName, env, claudeSessionUrl, platformDomain, locale, timezone }`.
 
 ## Live data
 

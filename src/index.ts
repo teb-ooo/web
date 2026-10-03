@@ -27,7 +27,6 @@ export {
   useEventStream,
   runEventStream,
   backoffDelay,
-  type AssistantEvents,
   type BackoffOptions,
   type EventHandlers,
   type EventMap,
