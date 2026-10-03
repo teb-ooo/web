@@ -198,6 +198,9 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     setCapturing(true);
     setShotError(null);
     try {
+      // Taking the picture blocks the page for a few hundred milliseconds. Let the spinner paint (and start its
+      // compositor animation) first, or it only appears once the work is done.
+      await new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
       const s = await captureScreenshot();
       shotRef.current = s;
       setShot(s);
