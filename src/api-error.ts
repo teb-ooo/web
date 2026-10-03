@@ -55,15 +55,16 @@ export class ApiError extends Error implements ProblemDetails {
   }
 
   /**
-   * A sentence for a person: the server's detail on a 4xx that has one, else a plain sentence for the status
+   * A sentence for a person: the server's detail on a 4xx that has one (it often says who may do the thing), else a plain sentence for the status
    * ("The server could not do that. Try again in a moment."). `message` keeps the raw "Title: detail" for logs.
    */
   get userMessage(): string {
     if (this.status >= 500) return "The server could not do that. Try again in a moment.";
+    // A 4xx detail is the server telling the person what to do or who may (a 403 names who can); keep it when there is one.
+    if (this.detail !== "") return this.detail;
     if (this.status === 401) return "Sign in again to continue.";
     if (this.status === 403) return "You may not do this.";
     if (this.status === 404) return "Not found.";
-    if (this.detail !== "") return this.detail;
     return this.title;
   }
 

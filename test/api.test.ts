@@ -111,6 +111,8 @@ describe("ApiError.userMessage", () => {
     expect(new ApiError({ status: 500, title: "Internal Server Error", detail: "internal error" }).userMessage).toBe("The server could not do that. Try again in a moment.");
     expect(new ApiError({ status: 422, title: "Unprocessable Entity", detail: "Rule text is too long." }).userMessage).toBe("Rule text is too long.");
     expect(new ApiError({ status: 403, title: "Forbidden" }).userMessage).toBe("You may not do this.");
+    expect(new ApiError({ status: 403, title: "Forbidden", detail: "Only the platform agent applies a proposal." }).userMessage).toBe("Only the platform agent applies a proposal.");
+    expect(new ApiError({ status: 404, title: "Not Found" }).userMessage).toBe("Not found.");
     expect(new ApiError({ status: 409, title: "Conflict" }).userMessage).toBe("Conflict");
   });
 });
