@@ -15,6 +15,8 @@ version="$(node -p "require('./package.json').version")"
 [ "$(git rev-parse HEAD)" = "$(git rev-parse "v${version}^{commit}" 2>/dev/null || true)" ] ||
   { echo "publish: HEAD is not tagged v${version}" >&2; exit 1; }
 
+node scripts/check-peers.mjs || { echo "publish: fix the peer ranges, or set ALLOW_PEER_MISMATCH=1 with a reason in the commit" >&2; exit 1; }
+
 cfg="$(mktemp)"
 trap 'rm -f "$cfg"' EXIT
 chmod 600 "$cfg"
