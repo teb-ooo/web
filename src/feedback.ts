@@ -211,18 +211,26 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     if (!picking) return;
     const overlay = document.createElement("div");
     overlay.setAttribute(FEEDBACK_IGNORE_ATTR, "");
-    Object.assign(overlay.style, { position: "fixed", pointerEvents: "none", zIndex: "2147483647", outline: "2px solid var(--color-link, currentColor)", background: "transparent" });
+    // One persistent box: it glides to whatever is hovered (position by transform, size by width and height) instead of
+    // being redrawn on each element. The first placement jumps; reduced motion jumps always.
+    const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    const glide = calm ? "none" : "transform 110ms cubic-bezier(0.22, 1, 0.36, 1), width 110ms cubic-bezier(0.22, 1, 0.36, 1), height 110ms cubic-bezier(0.22, 1, 0.36, 1), opacity 90ms ease-out";
+    Object.assign(overlay.style, { position: "fixed", left: "0", top: "0", pointerEvents: "none", zIndex: "2147483647", outline: "2px solid var(--color-link, currentColor)", background: "transparent", opacity: "0" });
     document.body.appendChild(overlay);
     let hovered: Element | null = null;
+    let placed = false;
     const onMove = (e: MouseEvent) => {
       const t = e.target instanceof Element && !isFeedbackNode(e.target) ? e.target : null;
       hovered = t;
       if (!t) {
-        overlay.style.display = "none";
+        overlay.style.opacity = "0";
         return;
       }
       const r = t.getBoundingClientRect();
-      Object.assign(overlay.style, { display: "block", left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      // Before the first placement, and after the box was hidden, it appears in place instead of flying in from the corner.
+      overlay.style.transition = placed && overlay.style.opacity !== "0" ? glide : calm ? "none" : "opacity 90ms ease-out";
+      Object.assign(overlay.style, { opacity: "1", transform: `translate(${r.left}px, ${r.top}px)`, width: `${r.width}px`, height: `${r.height}px` });
+      placed = true;
     };
     const onClick = (e: MouseEvent) => {
       if (!hovered) return;
