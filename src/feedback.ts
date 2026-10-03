@@ -55,8 +55,8 @@ export interface FeedbackController {
   /** Whether the picked element goes with the report. Default true. */
   includeElement: boolean;
   setIncludeElement: (on: boolean) => void;
-  /** Where the click that picked the element landed, in viewport pixels: the panel opens next to it. Null when nothing was picked. */
-  anchor: { x: number; y: number } | null;
+  /** The picked element's box in viewport pixels, kept current on scroll and resize: the panel opens below it. Null when nothing was picked. */
+  anchor: { x: number; y: number; width: number; height: number } | null;
   picking: boolean;
   startPicking: () => void;
   stopPicking: () => void;
@@ -139,7 +139,8 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
   const [text, setText] = useState("");
   const [element, setElement] = useState<PickedElement | null>(null);
   const [includeElement, setIncludeElement] = useState(true);
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [anchor, setAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const pickedRef = useRef<Element | null>(null);
   const [picking, setPicking] = useState(false);
   const [includeScreenshot, setIncludeScreenshotState] = useState(false);
   const [shot, setShot] = useState<Screenshot | null>(null);
@@ -164,6 +165,7 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     setText("");
     setElement(null);
     setAnchor(null);
+    pickedRef.current = null;
     setIncludeElement(true);
     setIncludeScreenshotState(false);
     dropShot();
@@ -246,7 +248,9 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
       e.preventDefault();
       e.stopPropagation();
       setElement(describeElement(hovered));
-      setAnchor({ x: e.clientX, y: e.clientY });
+      pickedRef.current = hovered;
+      const r = hovered.getBoundingClientRect();
+      setAnchor({ x: r.left, y: r.top, width: r.width, height: r.height });
       setPicking(false);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -265,6 +269,39 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
       overlay.remove();
     };
   }, [picking]);
+
+  // While the panel is open the picked element stays outlined, and the anchor follows it through scroll and resize.
+  const outlined = isOpen && !picking && anchor !== null;
+  useEffect(() => {
+    const el = pickedRef.current;
+    if (!outlined || !el) return;
+    const box = document.createElement("div");
+    box.setAttribute(FEEDBACK_IGNORE_ATTR, "");
+    Object.assign(box.style, { position: "fixed", left: "0", top: "0", pointerEvents: "none", zIndex: "2147483646", outline: "2px solid var(--color-link, currentColor)", background: "transparent" });
+    document.body.appendChild(box);
+    const place = () => {
+      const r = el.getBoundingClientRect();
+      Object.assign(box.style, { transform: `translate(${r.left}px, ${r.top}px)`, width: `${r.width}px`, height: `${r.height}px` });
+      return r;
+    };
+    place();
+    let frame = 0;
+    const onMove = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const r = place();
+        setAnchor((a) => (a && a.x === r.left && a.y === r.top && a.width === r.width && a.height === r.height ? a : { x: r.left, y: r.top, width: r.width, height: r.height }));
+      });
+    };
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
+      box.remove();
+    };
+  }, [outlined]);
 
   const sends = useMemo(() => {
     const c = isOpen ? currentContext() : null;
@@ -313,6 +350,7 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     stopPicking: () => setPicking(false),
     clearElement: () => {
       setElement(null);
+      pickedRef.current = null;
       setAnchor(null);
     },
     includeScreenshot,
