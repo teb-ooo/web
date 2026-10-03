@@ -71,4 +71,4 @@ export { playground, getPlayground, type PlaygroundConfig, type PlaygroundRaw } 
 export { loginUrl, redirectToLogin, type RedirectFn } from "./request.js";
 export { useHasLiveStream, useLiveStatus } from "./live-status.js";
 export { LOGOUT_PATH, platformDomain, platformLinks, platformUrl, type PlatformLink } from "./platform.js";
-export { useAgentStatus, type AgentState, type AgentStatus, type AgentStatusOptions } from "./agent-status.js";
+export { formatElapsed, turnElapsedMs, useAgentStatus, type AgentAction, type AgentState, type AgentStatus, type AgentStatusOptions } from "./agent-status.js";

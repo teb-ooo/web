@@ -3,6 +3,16 @@ import { useUser } from "./auth.js";
 
 export type AgentStatus = "working" | "idle" | "offline" | "logged_out";
 
+/** What the agent is doing right now, as the platform describes it (a label from a fixed list and a safe target). */
+export interface AgentAction {
+  /** For example "Editing", "Running tests", "Searching the code", "Waiting for a reply". */
+  label: string;
+  /** A repo-relative path, an agent type or "": never raw input. */
+  target: string;
+  /** RFC 3339 time the action began. */
+  since: string;
+}
+
 export interface AgentState {
   agent: string;
   status: AgentStatus;
@@ -10,6 +20,14 @@ export interface AgentState {
   since: string;
   /** A line about what it is doing, or "". */
   summary: string;
+  /** The current action, or null (an older platform, or nothing running). */
+  action: AgentAction | null;
+  /** RFC 3339 time the current turn began, or "" outside a turn. */
+  turnStartedAt: string;
+  /** The server's clock when it answered, for a timer without clock skew. Milliseconds since the epoch, or 0 when unknown. */
+  serverTime: number;
+  /** When this answer arrived here (`Date.now()`), so a timer can keep ticking between polls. */
+  receivedAt: number;
 }
 
 export interface AgentStatusOptions {
@@ -19,6 +37,10 @@ export interface AgentStatusOptions {
   enabled?: boolean;
   /** Milliseconds between asks while the tab is visible. Default 15000. */
   intervalMs?: number;
+  /** Ask this often instead while true (a popover that shows the live details is open). Default 3000. */
+  fastMs?: number;
+  /** Poll at `fastMs`. */
+  fast?: boolean;
   /** Also in a test browser (`navigator.webdriver`), which is skipped by default so `networkidle` settles. */
   force?: boolean;
   /** Test hook. */
@@ -26,6 +48,13 @@ export interface AgentStatusOptions {
 }
 
 const STATUSES: readonly string[] = ["working", "idle", "offline", "logged_out"];
+
+function parseAction(raw: unknown): AgentAction | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const a = raw as Record<string, unknown>;
+  if (typeof a.label !== "string" || a.label === "") return null;
+  return { label: a.label, target: typeof a.target === "string" ? a.target : "", since: typeof a.since === "string" ? a.since : "" };
+}
 
 function parse(body: unknown): AgentState | null {
   if (body === null || typeof body !== "object") return null;
@@ -36,6 +65,10 @@ function parse(body: unknown): AgentState | null {
     status: b.status as AgentStatus,
     since: typeof b.since === "string" ? b.since : "",
     summary: typeof b.summary === "string" ? b.summary : "",
+    action: parseAction(b.action),
+    turnStartedAt: typeof b.turn_started_at === "string" ? b.turn_started_at : "",
+    serverTime: typeof b.server_time === "string" && !Number.isNaN(Date.parse(b.server_time)) ? Date.parse(b.server_time) : 0,
+    receivedAt: Date.now(),
   };
 }
 
@@ -45,7 +78,8 @@ function parse(body: unknown): AgentState | null {
  * route is missing or fails, it is `null` and the bar draws no dot.
  */
 export function useAgentStatus(options: AgentStatusOptions = {}): AgentState | null {
-  const { endpoint = "/_playground/agent", enabled = true, intervalMs = 15_000 } = options;
+  const { endpoint = "/_playground/agent", enabled = true, fastMs = 3_000 } = options;
+  const intervalMs = options.fast ? fastMs : (options.intervalMs ?? 15_000);
   const { user } = useUser();
   const person = user !== null && (user.is_admin || user.is_owner === true);
   const quiet = typeof navigator !== "undefined" && navigator.webdriver === true && options.force !== true;
@@ -94,4 +128,25 @@ export function useAgentStatus(options: AgentStatusOptions = {}): AgentState | n
   }, [on, endpoint, intervalMs]);
 
   return on ? state : null;
+}
+
+/** How long the current turn has run, in milliseconds, from an answer of `useAgentStatus`; null outside a turn. Pass `Date.now()` as `now`. */
+export function turnElapsedMs(state: Pick<AgentState, "turnStartedAt" | "serverTime" | "receivedAt"> | null, now: number): number | null {
+  if (!state || state.turnStartedAt === "") return null;
+  const started = Date.parse(state.turnStartedAt);
+  if (Number.isNaN(started)) return null;
+  // The server's clock at the answer plus what has passed here since it arrived: no browser clock skew.
+  const serverNow = state.serverTime > 0 ? state.serverTime + (now - state.receivedAt) : now;
+  return Math.max(0, serverNow - started);
+}
+
+/** "4m 12s", "38s", "1h 05m". */
+export function formatElapsed(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
+  return `${s}s`;
 }

@@ -103,6 +103,8 @@ The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so
 
 `useFeedback` opens straight into picking an element (0.7.3): open, click the element, type, Enter. Escape while picking skips the pick. `pickOnOpen: false` opens to the text instead.
 
-## Agent status (0.7.4)
+## Agent status (0.7.4, action and turn timer 0.7.5)
 
 `useAgentStatus()` polls the platform's `GET /_playground/agent` on the app's own origin every 15 s while the tab is visible and returns `{agent, status, since, summary}` with `status` one of `working`, `idle`, `offline`, `logged_out`; the platform bar's dot on the agent button follows it. Only the superadmin or the app's owner can read it; for anyone else, in a test browser (unless `force`), or when the route is missing or fails, it returns `null` and the bar draws no dot.
+
+From 0.7.5 `useAgentStatus` also returns `action` (`{label, target, since}` or null), `turnStartedAt` (or ""), `serverTime` and `receivedAt`; `turnElapsedMs(state, Date.now())` gives the turn's age on the server's clock and `formatElapsed(ms)` writes it ("4m 12s"). `fast: true` polls every 3 s (`fastMs`) instead of every 15 s, for a popover that is open. An older platform answer simply has no action and no turn.
