@@ -108,3 +108,28 @@ The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so
 `useAgentStatus()` polls the platform's `GET /_playground/agent` on the app's own origin every 15 s while the tab is visible and returns `{agent, status, since, summary}` with `status` one of `working`, `idle`, `offline`, `logged_out`; the platform bar's dot on the agent button follows it. Only the superadmin or the app's owner can read it; for anyone else, in a test browser (unless `force`), or when the route is missing or fails, it returns `null` and the bar draws no dot.
 
 From 0.7.5 `useAgentStatus` also returns `action` (`{label, target, since}` or null), `turnStartedAt` (or ""), `serverTime` and `receivedAt`; `turnElapsedMs(state, Date.now())` gives the turn's age on the server's clock and `formatElapsed(ms)` writes it ("4m 12s"). `fast: true` polls every 3 s (`fastMs`) instead of every 15 s, for a popover that is open. An older platform answer simply has no action and no turn.
+
+## Server-driven lists: useListTable
+
+A list the server pages (an operation with `limit`, `cursor` and `next_cursor`) is searched, filtered and sorted by the server through the operation's parameters, never in the client over the rows of one page ([API-bpe](https://rb.teb.ooo/rule/API-bpe)). `useListTable` owns the state for that and returns props for `DataTable` from `@teb-ooo/ui`:
+
+```tsx
+const list = useListTable({
+  useList: (params) => $api.useQuery("get", "/api/issues", { params: { query: params } }, { placeholderData: keepPreviousData }),
+  filters: { status: undefined as string | undefined },
+  sort: { columnId: "updated", direction: "desc" },
+  pageSizes: [25, 50, 100],
+});
+return (
+  <>
+    <SearchInput value={list.query} onValueChange={list.setQuery} label="Search" />
+    <Select label="Status" value={list.filters.status ?? null} onValueChange={(v) => list.setFilter("status", v ?? undefined)} options={statusOptions} />
+    <DataTable label="Issues" columns={columns} rowKey={(r) => r.id} {...list.table} empty={list.hasActiveFilters ? <EmptyState title="No issues match" action={<Button onClick={list.clearFilters}>Clear filters</Button>} /> : "No issues yet."} />
+  </>
+);
+```
+
+- **Owns:** the search text (`query`, sent debounced as `q`), the `filters` (each sent as its own parameter, left out when empty), the `sort` (sent as `sort`, `-name` for descending), the page size (`limit`) and the cursor stack: Next uses the response's `next_cursor`, Previous goes back through the cursors already seen. Any change of search, filter, sort or page size returns to the first page.
+- **Returns:** `table` (spread it onto `DataTable`: `rows`, `loading`, `error` as a sentence with `onRetry`, `sort`, `onSortChange` and `pagination` with `hasNext`), `query`/`setQuery`, `filters`/`setFilter`/`clearFilters`, `hasActiveFilters`, `params` and `isFetching`.
+- **Options:** `select(data) => { rows, nextCursor }` (default `data.items` and `data.next_cursor`), `paramNames` ({ q, limit, cursor, sort }), `formatSort`, `debounceMs` (250), `pageSize` (25).
+- The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page and the real count on the last one.
