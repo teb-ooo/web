@@ -37,7 +37,7 @@ Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlaygrou
 
 ## Live data
 
-`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream ([UI-yvn](https://rb.teb.ooo/rule/UI-yvn), design in the shared docs `live-data.md`), so a screen changes within a second or two when someone else changes the data, with no reload.
+`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream ([UI-yvn](https://rb.teb.ooo/UI-yvn), design in the shared docs `live-data.md`), so a screen changes within a second or two when someone else changes the data, with no reload.
 
 ```tsx
 import { useLive } from "@teb-ooo/web";
@@ -111,7 +111,7 @@ From 0.7.5 `useAgentStatus` also returns `action` (`{label, target, since}` or n
 
 ## Server-driven lists: useListTable
 
-A list the server pages (an operation with `limit`, `cursor` and `next_cursor`) is searched, filtered and sorted by the server through the operation's parameters, never in the client over the rows of one page ([API-bpe](https://rb.teb.ooo/rule/API-bpe)). `useListTable` owns the state for that and returns props for `DataTable` from `@teb-ooo/ui`:
+A list the server pages (an operation with `limit`, `cursor` and `next_cursor`) is searched, filtered and sorted by the server through the operation's parameters, never in the client over the rows of one page ([API-bpe](https://rb.teb.ooo/API-bpe)). `useListTable` owns the state for that and returns props for `DataTable` from `@teb-ooo/ui`:
 
 ```tsx
 const list = useListTable({
