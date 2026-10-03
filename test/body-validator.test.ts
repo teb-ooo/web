@@ -83,6 +83,8 @@ describe("friendlyMessage", () => {
     expect(friendlyMessage("expected length <= 20")).toBe("Use at most 20 characters.");
     expect(friendlyMessage("expected required property title to be present")).toBe("Required.");
     expect(friendlyMessage("expected string to be a valid email")).toBe("Enter a valid email address.");
+    expect(friendlyMessage("expected string to match lowercase letters, digits and underscore")).toBe("Use lowercase letters, digits and underscore.");
+    expect(friendlyMessage("expected string to match pattern ^a+$")).toBe("Use the expected format.");
     expect(friendlyMessage("something the server said")).toBe("something the server said");
   });
 });

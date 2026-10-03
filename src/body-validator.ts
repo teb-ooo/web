@@ -218,6 +218,8 @@ export function friendlyMessage(message: string): string {
     [/^must be integer$/, () => "Enter a whole number."],
     [/^must be number$/, () => "Enter a number."],
     [/^must be string$/, () => "Enter text."],
+    [/^expected string to match pattern .+$/, () => "Use the expected format."],
+    [/^expected string to match (.+)$/, (m) => `Use ${m[1]}.`],
     [/^expected string to be a valid email$/, () => "Enter a valid email address."],
     [/^expected string to be a valid (.+)$/, (m) => `Enter a valid ${m[1]}.`],
     [/^expected value to be one of .+$/, () => "Choose one of the options."],
