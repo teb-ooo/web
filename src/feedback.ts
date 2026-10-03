@@ -52,6 +52,11 @@ export interface FeedbackController {
   text: string;
   setText: (text: string) => void;
   element: PickedElement | null;
+  /** Whether the picked element goes with the report. Default true. */
+  includeElement: boolean;
+  setIncludeElement: (on: boolean) => void;
+  /** Where the click that picked the element landed, in viewport pixels: the panel opens next to it. Null when nothing was picked. */
+  anchor: { x: number; y: number } | null;
   picking: boolean;
   startPicking: () => void;
   stopPicking: () => void;
@@ -133,6 +138,8 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState("");
   const [element, setElement] = useState<PickedElement | null>(null);
+  const [includeElement, setIncludeElement] = useState(true);
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const [picking, setPicking] = useState(false);
   const [includeScreenshot, setIncludeScreenshotState] = useState(false);
   const [shot, setShot] = useState<Screenshot | null>(null);
@@ -156,6 +163,8 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
   const reset = useCallback(() => {
     setText("");
     setElement(null);
+    setAnchor(null);
+    setIncludeElement(true);
     setIncludeScreenshotState(false);
     dropShot();
     setShotError(null);
@@ -237,6 +246,7 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
       e.preventDefault();
       e.stopPropagation();
       setElement(describeElement(hovered));
+      setAnchor({ x: e.clientX, y: e.clientY });
       setPicking(false);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -261,10 +271,10 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     const lines = c
       ? [`The page: ${c.route}`, `Console errors: the last ${c.console_errors.length} of up to 20`, `Viewport: ${c.viewport.width} × ${c.viewport.height}`, "Your browser: the user agent"]
       : [];
-    if (element) lines.push(`The element you picked: ${element.selector}`);
+    if (element && includeElement) lines.push(`The element you picked: ${element.selector}`);
     if (includeScreenshot && shot) lines.push(`A screenshot (${shot.type.replace("image/", "")}, ${Math.round(shot.size / 1024)} KB), as in the preview`);
     return lines;
-  }, [isOpen, element, includeScreenshot, shot]);
+  }, [isOpen, element, includeElement, includeScreenshot, shot]);
 
   const submit = useCallback(async () => {
     if (!available || text.trim() === "" || status === "sending") return;
@@ -272,7 +282,7 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     setError(null);
     const body = new FormData();
     body.set("text", text.trim());
-    body.set("context", JSON.stringify({ ...currentContext(), element }));
+    body.set("context", JSON.stringify({ ...currentContext(), element: includeElement ? element : null }));
     if (includeScreenshot && shotRef.current) body.set("screenshot", shotRef.current.blob, `screenshot.${shotRef.current.type === "image/png" ? "png" : "jpg"}`);
     try {
       const res = await (options.fetch ?? globalThis.fetch)(endpoint, { method: "POST", body, credentials: "include", headers: { Accept: "application/json" } });
@@ -285,7 +295,7 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
       setError(e instanceof Error ? e.message : "The feedback could not be sent.");
       setStatus("failed");
     }
-  }, [available, text, status, element, includeScreenshot, endpoint, options.fetch]);
+  }, [available, text, status, element, includeElement, includeScreenshot, endpoint, options.fetch]);
 
   return {
     available,
@@ -295,10 +305,16 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     text,
     setText,
     element,
+    includeElement,
+    setIncludeElement,
+    anchor,
     picking,
     startPicking: () => setPicking(true),
     stopPicking: () => setPicking(false),
-    clearElement: () => setElement(null),
+    clearElement: () => {
+      setElement(null);
+      setAnchor(null);
+    },
     includeScreenshot,
     setIncludeScreenshot,
     screenshot: shot ? { url: shot.url, type: shot.type, size: shot.size } : null,
