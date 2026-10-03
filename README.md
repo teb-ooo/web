@@ -37,7 +37,7 @@ Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlaygrou
 
 ## Live data
 
-`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream (UI-yvn, design in the shared docs `live-data.md`), so a screen changes within a second or two when someone else changes the data, with no reload.
+`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream ([UI-yvn](https://rb.teb.ooo/rule/UI-yvn), design in the shared docs `live-data.md`), so a screen changes within a second or two when someone else changes the data, with no reload.
 
 ```tsx
 import { useLive } from "@teb-ooo/web";
