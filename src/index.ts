@@ -60,6 +60,7 @@ export { createSseParser, type SseMessage, type SseParser } from "./sse.js";
 export {
   createBodyValidator,
   findBodySchema,
+  friendlyMessage,
   type BodyValidator,
   type FieldErrors,
   type JsonSchema,

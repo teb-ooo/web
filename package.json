@@ -1,6 +1,6 @@
 {
   "name": "@teb-ooo/web",
-  "version": "0.7.5",
+  "version": "0.8.0",
   "description": "Non-visual frontend glue for playground apps: typed API client, auth hooks, SSE, forms, formatters.",
   "type": "module",
   "license": "UNLICENSED",

@@ -75,3 +75,14 @@ describe("interpreting body validator", () => {
     }
   });
 });
+
+describe("friendlyMessage", () => {
+  it("turns schema wording into a sentence and leaves unknown text alone", async () => {
+    const { friendlyMessage } = await import("../src/body-validator.js");
+    expect(friendlyMessage("expected length >= 1")).toBe("Enter a value.");
+    expect(friendlyMessage("expected length <= 20")).toBe("Use at most 20 characters.");
+    expect(friendlyMessage("expected required property title to be present")).toBe("Required.");
+    expect(friendlyMessage("expected string to be a valid email")).toBe("Enter a valid email address.");
+    expect(friendlyMessage("something the server said")).toBe("something the server said");
+  });
+});

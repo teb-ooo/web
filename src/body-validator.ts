@@ -199,3 +199,35 @@ export function createBodyValidator<T = unknown>(spec: OpenApiDocument | JsonSch
     },
   };
 }
+
+/**
+ * Turns a validator or Huma message ("expected length >= 1") into a sentence for a person ("Enter a value.").
+ * Messages it does not know come back unchanged. `useForm().fieldError` applies it; `errors` keeps the raw text.
+ */
+export function friendlyMessage(message: string): string {
+  const rules: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+    [/^expected required property .+ to be present$/, () => "Required."],
+    [/^expected length >= 1$/, () => "Enter a value."],
+    [/^expected length >= (\d+)$/, (m) => `Use at least ${m[1]} characters.`],
+    [/^expected length <= (\d+)$/, (m) => `Use at most ${m[1]} characters.`],
+    [/^expected number >= (.+)$/, (m) => `Enter ${m[1]} or more.`],
+    [/^expected number <= (.+)$/, (m) => `Enter ${m[1]} or less.`],
+    [/^expected number > (.+)$/, (m) => `Enter more than ${m[1]}.`],
+    [/^expected number < (.+)$/, (m) => `Enter less than ${m[1]}.`],
+    [/^expected number to be a multiple of (.+)$/, (m) => `Enter a multiple of ${m[1]}.`],
+    [/^must be integer$/, () => "Enter a whole number."],
+    [/^must be number$/, () => "Enter a number."],
+    [/^must be string$/, () => "Enter text."],
+    [/^expected string to be a valid email$/, () => "Enter a valid email address."],
+    [/^expected string to be a valid (.+)$/, (m) => `Enter a valid ${m[1]}.`],
+    [/^expected value to be one of .+$/, () => "Choose one of the options."],
+    [/^expected array length >= (\d+)$/, (m) => `Choose at least ${m[1]}.`],
+    [/^expected array length <= (\d+)$/, (m) => `Choose at most ${m[1]}.`],
+    [/^expected array items to be unique$/, () => "Remove the duplicates."],
+  ];
+  for (const [re, make] of rules) {
+    const m = message.match(re);
+    if (m) return make(m);
+  }
+  return message;
+}

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useForm as useTanstackForm, useStore, type DeepKeys, type DeepValue } from "@tanstack/react-form";
 import { isApiError } from "./api-error.js";
+import { friendlyMessage } from "./body-validator.js";
 import type { BodyValidator, FieldErrors } from "./body-validator.js";
 
 export interface UseFormOptions<T extends Record<string, unknown>> {
@@ -85,9 +86,10 @@ export function useForm<T extends Record<string, unknown>>(validator: BodyValida
     (name: string): string | undefined => {
       const key = locationOf(name);
       const server = serverErrors[key];
-      if (server !== undefined) return server;
+      if (server !== undefined) return friendlyMessage(server);
       const shown = attempts > 0 || fieldMeta[name]?.isTouched === true;
-      return shown ? clientErrors[key] : undefined;
+      const client = clientErrors[key];
+      return shown && client !== undefined ? friendlyMessage(client) : undefined;
     },
     [serverErrors, clientErrors, attempts, fieldMeta],
   );

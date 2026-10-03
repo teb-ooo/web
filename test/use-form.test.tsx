@@ -81,7 +81,7 @@ describe("useForm", () => {
     const { result } = renderHook(() => useForm(validator, { defaultValues: { title: "ab" } as CreateItem, onSubmit: vi.fn() }));
     expect(result.current.fieldError("title")).toBeUndefined();
     act(() => result.current.field("title").onBlur());
-    expect(result.current.fieldError("title")).toMatch(/length >= 3/);
+    expect(result.current.fieldError("title")).toBe("Use at least 3 characters.");
     expect(result.current.errors["body.title"]).toBeDefined();
   });
 
@@ -98,7 +98,7 @@ describe("useForm", () => {
     await act(() => result.current.handleSubmit());
     expect(result.current.errors["body.title"]).toBe("expected length >= 3");
     expect(result.current.errors["body.quantity"]).toBe("expected number >= 1");
-    expect(result.current.fieldError("title")).toBe("expected length >= 3");
+    expect(result.current.fieldError("title")).toBe("Use at least 3 characters.");
     act(() => result.current.setValue("title", "milky"));
     expect(result.current.fieldError("title")).toBeUndefined();
     expect(result.current.errors["body.quantity"]).toBe("expected number >= 1");
