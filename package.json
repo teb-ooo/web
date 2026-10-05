@@ -1,6 +1,6 @@
 {
   "name": "@teb-ooo/web",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "description": "Non-visual frontend glue for playground apps: typed API client, auth hooks, SSE, forms, formatters.",
   "type": "module",
   "license": "UNLICENSED",
@@ -35,7 +35,8 @@
     "test": "vitest run",
     "gen:fixture": "openapi-typescript test/fixtures/openapi.json -o test/fixtures/schema.d.ts",
     "prepack": "npm run build",
-    "check:release-age": "node /playground/brain/rules/tools/check-release-age.mjs ."
+    "check:release-age": "node /playground/brain/rules/tools/check-release-age.mjs .",
+    "lint": "oxlint src scripts test"
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.5",
@@ -74,6 +75,7 @@
     "openapi-fetch": "^0.17.0",
     "openapi-react-query": "^0.5.4",
     "openapi-typescript": "^7.13.0",
+    "oxlint": "1.83.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "typescript": "6.0.3",

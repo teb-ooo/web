@@ -24,7 +24,7 @@ describe("createApi", () => {
     );
     const api = createApi<paths>({ headers: { "X-App": "hello" }, fetch: spy });
     const a = await api.client.GET("/api/items");
-    const b = await api.client.GET("/api/items");
+    await api.client.GET("/api/items");
     expect(a.data?.items[0]?.title).toBe("milk");
     expect(seen).toHaveLength(2);
     for (const s of seen) {
