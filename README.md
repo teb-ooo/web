@@ -134,3 +134,7 @@ return (
 - **Returns:** `table` (spread it onto `DataTable`: `rows`, `loading`, `error` as a sentence with `onRetry`, `sort`, `onSortChange` and `pagination` with `hasNext`), `query`/`setQuery`, `filters`/`setFilter`/`clearFilters`, `hasActiveFilters`, `params` and `isFetching`.
 - **Options:** `select(data) => { rows, nextCursor }` (default `data.items` and `data.next_cursor`), `paramNames` ({ q, limit, cursor, sort }), `formatSort`, `debounceMs` (250), `pageSize` (25).
 - The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page and the real count on the last one.
+
+## Lint
+
+`npm run lint` runs Oxlint with the template's configuration (`.oxlintrc.json`); `scripts/publish.sh` refuses to publish with lint errors. There is no formatter: formatting is not enforced in this package.
