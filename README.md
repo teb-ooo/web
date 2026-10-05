@@ -31,7 +31,7 @@ function NewItem() {
 // route: beforeLoad: RequireUser   (router context must carry { queryClient })
 ```
 
-Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer`, `sseResponse`, `problemResponse`.
+Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer`, `sseResponse`, `problemResponse`, and (0.9.6) `paletteRouteProblems(spec, routePatterns)`, which lists `x-palette` tags whose `when.route` matches no route of the app.
 
 `playground` (from `window.__PLAYGROUND__`) exposes `{ appName, env, claudeSessionUrl, platformDomain, locale, timezone }`.
 

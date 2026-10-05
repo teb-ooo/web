@@ -68,3 +68,27 @@ export function problemResponse(status: number, problem: Record<string, unknown>
     headers: { "Content-Type": "application/problem+json" },
   });
 }
+
+interface PaletteDoc {
+  paths?: Record<string, Record<string, { operationId?: string; "x-palette"?: unknown } | undefined> | undefined>;
+}
+
+/**
+ * The `x-palette` tags (decision 0004, `PaletteFromApi` in `@teb-ooo/ui/cmdk`) whose `when.route` matches no route of the
+ * app: a tag that can never show because the route was renamed. Pass the OpenAPI document and the router's route patterns,
+ * for example `Object.keys(router.routesByPath)` (patterns such as `/rule/$code`). One line per problem; assert it is empty.
+ */
+export function paletteRouteProblems(spec: PaletteDoc, routePatterns: readonly string[]): string[] {
+  const known = new Set(routePatterns);
+  const out: string[] = [];
+  for (const [path, item] of Object.entries(spec.paths ?? {})) {
+    for (const [method, op] of Object.entries(item ?? {})) {
+      const tag = op?.["x-palette"];
+      const route = typeof tag === "object" && tag !== null && "when" in tag ? (tag as { when?: { route?: unknown } }).when?.route : undefined;
+      if (typeof route === "string" && !known.has(route)) {
+        out.push(`${method.toUpperCase()} ${path} (${op?.operationId ?? "no operationId"}): x-palette.when.route "${route}" matches no route`);
+      }
+    }
+  }
+  return out;
+}
