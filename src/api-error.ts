@@ -1,3 +1,4 @@
+import { isRecord } from "./internal.js";
 /** One entry of RFC 9457 `errors` as emitted by Huma. */
 export interface ProblemFieldError {
   message?: string;
@@ -13,10 +14,6 @@ export interface ProblemDetails {
   detail?: string;
   instance?: string;
   errors?: ProblemFieldError[] | null;
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
 /**

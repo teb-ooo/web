@@ -1,3 +1,4 @@
+import { isRecord } from "./internal.js";
 /** A JSON Schema object (OpenAPI 3.1 dialect, as Huma emits). */
 export type JsonSchema = { [key: string]: unknown };
 
@@ -16,10 +17,6 @@ export interface BodyValidator<T = unknown> {
   /** Type guard form of `validate`. */
   isValid(values: unknown): values is T;
   readonly schema: JsonSchema;
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
 const JSON_MEDIA = /^application\/(.+\+)?json/;

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "./auth.js";
+import { isTestBrowser } from "./internal.js";
+import { platformFetch } from "./request.js";
 
 export type AgentStatus = "working" | "idle" | "offline" | "logged_out";
 
@@ -82,7 +84,7 @@ export function useAgentStatus(options: AgentStatusOptions = {}): AgentState | n
   const intervalMs = options.fast ? fastMs : (options.intervalMs ?? 15_000);
   const { user } = useUser();
   const person = user !== null && (user.is_admin || user.is_owner === true);
-  const quiet = typeof navigator !== "undefined" && navigator.webdriver === true && options.force !== true;
+  const quiet = isTestBrowser() && options.force !== true;
   const on = enabled && person && !quiet;
   const [state, setState] = useState<AgentState | null>(null);
 
@@ -99,7 +101,7 @@ export function useAgentStatus(options: AgentStatusOptions = {}): AgentState | n
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return schedule();
       controller = new AbortController();
       try {
-        const res = await doFetch(endpoint, { credentials: "include", headers: { Accept: "application/json" }, signal: controller.signal });
+        const res = await platformFetch(endpoint, { signal: controller.signal }, { fetch: doFetch });
         if (!alive) return;
         setState(res.ok ? parse(await res.json()) : null);
       } catch {

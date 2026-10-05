@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "./api-error.js";
 import { createSseParser, type SseMessage } from "./sse.js";
 import { REQUEST_ID_HEADER, newRequestId, redirectToLogin, type RedirectFn } from "./request.js";
+import { parseData } from "./internal.js";
 
 /** Map of event name to parsed `data` payload. */
 export type EventMap = object;
@@ -90,13 +91,6 @@ function defaultSleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-function parseData(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
 
 function retryable(status: number): boolean {
   return status >= 500 || status === 408 || status === 429;

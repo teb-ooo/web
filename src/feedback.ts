@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "./auth.js";
 import { captureConsoleErrors, captureScreenshot, describeElement, isFeedbackNode, recentConsoleErrors, FEEDBACK_IGNORE_ATTR } from "./feedback-capture.js";
 import type { PickedElement, Screenshot } from "./feedback-capture.js";
+import { isTestBrowser, searchFlag } from "./internal.js";
+import { isApiError } from "./api-error.js";
+import { platformFetch, throwIfNotOk } from "./request.js";
 
 export type { PickedElement } from "./feedback-capture.js";
 
@@ -112,15 +115,6 @@ function currentContext(): FeedbackContext {
   };
 }
 
-async function problemText(res: Response): Promise<string> {
-  try {
-    const p = (await res.json()) as { detail?: string; title?: string };
-    return p.detail ?? p.title ?? `The server answered ${res.status}.`;
-  } catch {
-    return `The server answered ${res.status}.`;
-  }
-}
-
 /**
  * The state and actions behind the feedback panel (`FeedbackPanel` in `@teb-ooo/ui`): free text, an optional picked
  * element, an optional screenshot with a preview, and the page context (route, the last 20 console errors, viewport,
@@ -132,8 +126,8 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
   const { endpoint = "/_playground/feedback", enabled = true, pickOnOpen = true } = options;
   const { user } = useUser();
   const person = user !== null && (user.is_admin || user.is_owner === true);
-  const forced = options.force === true || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("feedback") === "1");
-  const available = enabled && person && (forced || !(typeof navigator !== "undefined" && navigator.webdriver === true));
+  const forced = options.force === true || searchFlag("feedback") === "1";
+  const available = enabled && person && (forced || !isTestBrowser());
 
   const [isOpen, setIsOpen] = useState(false);
   const [text, setText] = useState("");
@@ -325,14 +319,14 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     body.set("context", JSON.stringify({ ...currentContext(), element: includeElement ? element : null }));
     if (includeScreenshot && shotRef.current) body.set("screenshot", shotRef.current.blob, `screenshot.${shotRef.current.type === "image/png" ? "png" : "jpg"}`);
     try {
-      const res = await (options.fetch ?? globalThis.fetch)(endpoint, { method: "POST", body, credentials: "include", headers: { Accept: "application/json" } });
-      if (!res.ok) throw new Error(await problemText(res));
+      const res = await throwIfNotOk(await platformFetch(endpoint, { method: "POST", body }, options.fetch ? { fetch: options.fetch } : {}));
       setResult((await res.json()) as FeedbackResult);
       setStatus("sent");
       writeDraft(null);
     } catch (e) {
       writeDraft({ text, element });
-      setError(e instanceof Error ? e.message : "The feedback could not be sent.");
+      // The panel is for the owner and says what the server said (for example that the agent route is not up).
+      setError(isApiError(e) ? (e.detail || e.userMessage) : e instanceof Error ? e.message : "The feedback could not be sent.");
       setStatus("failed");
     }
   }, [available, text, status, element, includeElement, includeScreenshot, endpoint, options.fetch]);

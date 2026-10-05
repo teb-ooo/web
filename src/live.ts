@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { matchesPaths, useLiveQueries } from "./live-queries.js";
 import type { LiveEvent, LiveQueries, LiveQueriesOptions, QueryMatcher } from "./live-queries.js";
+import { isTestBrowser, searchFlag } from "./internal.js";
 
 /** The resource a generated-hook query belongs to: the first path segment after `/api/` (`/api/widgets/{id}` is `widgets`). */
 export function resourceOfPath(path: string): string | null {
@@ -30,15 +31,11 @@ export interface LiveOptions extends Pick<LiveQueriesOptions, "onEvent" | "debou
   enabled?: boolean;
 }
 
-function searchParam(name: string): string | null {
-  return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(name);
-}
-
 /** Off in a test browser, so `networkidle` settles, unless forced; off with `?live=0`. */
 function streamAllowed(force: boolean | undefined): boolean {
-  if (force === true || searchParam("live") === "1") return true;
-  if (searchParam("live") === "0") return false;
-  return !(typeof navigator !== "undefined" && navigator.webdriver === true);
+  if (force === true || searchFlag("live") === "1") return true;
+  if (searchFlag("live") === "0") return false;
+  return !isTestBrowser();
 }
 
 /**

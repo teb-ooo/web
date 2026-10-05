@@ -62,3 +62,15 @@ export async function throwIfNotOk(res: Response): Promise<Response> {
   if (res.ok) return res;
   throw await ApiError.fromResponse(res);
 }
+
+/**
+ * A fetch with the playground request defaults for the package's own calls outside the generated client (the feedback
+ * post, the agent status): cookies included, `Accept: application/json`, and an `X-Request-Id` to find the request in the
+ * logs. Returns the response as is; pass it to `throwIfNotOk` for an `ApiError`.
+ */
+export function platformFetch(url: string, init: RequestInit = {}, opts: { fetch?: typeof globalThis.fetch; requestId?: () => string } = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  if (!headers.has(REQUEST_ID_HEADER)) headers.set(REQUEST_ID_HEADER, (opts.requestId ?? newRequestId)());
+  return (opts.fetch ?? globalThis.fetch)(url, { ...init, headers, credentials: "include" });
+}

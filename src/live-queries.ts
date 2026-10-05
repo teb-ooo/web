@@ -4,6 +4,7 @@ import type { Query } from "@tanstack/react-query";
 import { runEventStream } from "./event-stream.js";
 import { clearLiveStatus, publishLiveStatus } from "./live-status.js";
 import type { BackoffOptions, EventMeta, EventStreamOptions, StreamStatus } from "./event-stream.js";
+import { parseData } from "./internal.js";
 
 /** Decides which cached queries an event makes stale. */
 export type QueryMatcher = (query: Query) => boolean;
@@ -69,13 +70,6 @@ export interface LiveQueries {
   paused: boolean;
 }
 
-function parseData(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
 
 function subscribeVisibility(notify: () => void): () => void {
   document.addEventListener("visibilitychange", notify);
