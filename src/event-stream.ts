@@ -29,6 +29,9 @@ export interface BackoffOptions {
   random?: () => number;
 }
 
+/** How long a stream must have been open before its end counts as healthy and resets the backoff. */
+const HEALTHY_MS = 10_000;
+
 /** Exponential backoff with "equal jitter": half fixed, half random, capped. attempt starts at 0. */
 export function backoffDelay(attempt: number, o: BackoffOptions = {}): number {
   const base = o.baseMs ?? 500;
@@ -59,6 +62,8 @@ export interface EventStreamOptions {
   retryOn?: (status: number) => boolean;
   /** Test hook: replaces the reconnect timer. */
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /** Clock for the health check below (test hook). */
+  now?: () => number;
 }
 
 export interface EventStreamControls {
@@ -118,6 +123,7 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
   const { signal, options } = cfg;
   const doFetch = options.fetch ?? globalThis.fetch;
   const sleep = options.sleep ?? defaultSleep;
+  const now = options.now ?? Date.now;
   const makeId = options.requestId ?? newRequestId;
   const url = new URL(cfg.url, typeof window === "undefined" ? undefined : window.location.href).toString();
   let attempt = 0;
@@ -134,6 +140,7 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
   while (!signal.aborted) {
     cfg.setStatus(attempt === 0 && lastId === undefined ? "connecting" : "reconnecting");
     let finished = false;
+    let openedAt: number | null = null;
     try {
       const headers: Record<string, string> = {
         Accept: "text/event-stream",
@@ -163,6 +170,7 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
       } else {
         cfg.setError(null);
         cfg.setStatus("open");
+        openedAt = now();
         options.onOpen?.();
         const parser = createSseParser({
           onMessage: (m) => {
@@ -206,6 +214,9 @@ export async function runEventStream(cfg: RunConfig): Promise<void> {
     }
 
     if (signal.aborted) return;
+    // A connection that stayed open a while was healthy even if it carried only comments (`: live`, `: ping`): the next
+    // wait starts from the base again. One that opened and dropped at once keeps backing off.
+    if (openedAt !== null && now() - openedAt >= HEALTHY_MS) attempt = 0;
     if (!cfg.reconnect) {
       cfg.setStatus("error");
       return;

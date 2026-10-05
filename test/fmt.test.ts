@@ -73,3 +73,12 @@ describe("fmtBytes", () => {
     expect(fmtBytes(-1500)).toBe("-1.5 kB");
   });
 });
+
+describe("fmtDate and fmtDateTime with options", () => {
+  it("accept field options (no style default is mixed in) and style options", () => {
+    expect(fmtDate(T, { month: "short", day: "numeric" })).toBe("Sep 29");
+    expect(fmtDateTime(T, { hour: "2-digit", minute: "2-digit", hour12: false })).toMatch(/^\d{2}:\d{2}$/);
+    expect(fmtDate(T, { dateStyle: "long" })).toBe("September 29, 2026");
+    expect(fmtDateTime(T, { timeStyle: "short" })).toBe("Sep 29, 2026, 6:30 AM");
+  });
+});

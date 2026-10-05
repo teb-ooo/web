@@ -18,6 +18,8 @@ export interface ListQuery<D> {
   data: D | undefined;
   isPending: boolean;
   isFetching: boolean;
+  /** True while `data` is the previous page's, held by `placeholderData: keepPreviousData`. The generated hooks return it. */
+  isPlaceholderData?: boolean;
   error: unknown;
   refetch: () => unknown;
 }
@@ -136,7 +138,10 @@ export function useListTable<T, D, F extends ListFilters = ListFilters>(options:
 
   const result = useList(params);
   const { rows, nextCursor } = result.data !== undefined ? select(result.data) : { rows: [] as T[], nextCursor: undefined };
-  const hasNext = nextCursor !== undefined && nextCursor !== null && nextCursor !== "";
+  const moreAfterThis = nextCursor !== undefined && nextCursor !== null && nextCursor !== "";
+  // While the rows on screen are the previous page's (a page change is loading), their next cursor is not the current page's:
+  // going forward then would push the same cursor twice and show one page under the next one's range.
+  const hasNext = moreAfterThis && result.isPlaceholderData !== true;
 
   const onPageChange = useCallback(
     (page: number) => {
@@ -184,7 +189,7 @@ export function useListTable<T, D, F extends ListFilters = ListFilters>(options:
         page: current.page,
         pageSize,
         total: offset + rows.length,
-        totalIsLowerBound: hasNext,
+        totalIsLowerBound: moreAfterThis,
         hasNext,
         onPageChange,
         onPageSizeChange: setPageSize,

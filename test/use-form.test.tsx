@@ -104,6 +104,28 @@ describe("useForm", () => {
     expect(result.current.errors["body.quantity"]).toBe("expected number >= 1");
   });
 
+  it("shows a failed submit that has no field errors as submitError, cleared on the next submit or an edit", async () => {
+    const onSubmit = vi.fn().mockRejectedValueOnce(ApiError.fromProblem(409, { title: "Conflict", status: 409, detail: "That name is taken." })).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useForm(validator, { defaultValues: { title: "milk" } as CreateItem, onSubmit }));
+    expect(result.current.submitError).toBeNull();
+    await act(() => result.current.handleSubmit());
+    expect(result.current.submitError).toBe("That name is taken.");
+    act(() => result.current.setValue("title", "milky"));
+    expect(result.current.submitError).toBeNull();
+    onSubmit.mockRejectedValueOnce(ApiError.fromProblem(500, { title: "Internal Server Error", status: 500 }));
+    await act(() => result.current.handleSubmit());
+    expect(result.current.submitError).not.toBeNull();
+    await act(() => result.current.handleSubmit());
+    expect(result.current.submitError).toBeNull();
+  });
+
+  it("does not set submitError when the server named the fields", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(ApiError.fromProblem(422, validationProblem));
+    const { result } = renderHook(() => useForm(validator, { defaultValues: { title: "milk" } as CreateItem, onSubmit }));
+    await act(() => result.current.handleSubmit());
+    expect(result.current.submitError).toBeNull();
+  });
+
   it("rethrows non-ApiError failures from onSubmit", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("boom"));
     const { result } = renderHook(() => useForm(validator, { defaultValues: { title: "milk" } as CreateItem, onSubmit }));

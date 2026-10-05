@@ -25,6 +25,11 @@ export interface UseFormResult<T extends Record<string, unknown>> {
   errors: FieldErrors;
   isValid: boolean;
   isSubmitting: boolean;
+  /**
+   * A sentence for a submit that failed without a field to put it on (a conflict, a refusal, a server error): show it
+   * above the buttons. Null until then; cleared on the next submit, on an edit and on `reset`.
+   */
+  submitError: string | null;
   /** Bind to a control: `const f = form.field("title")`. Names are body paths: `title`, `address.city`, `tags[0]`. */
   field: <V = unknown>(name: string) => FieldBinding<V>;
   /** The visible error for a field name (same rule as `field(name).error`). */
@@ -60,6 +65,7 @@ const locationOf = (name: string) => `body.${name}`;
  */
 export function useForm<T extends Record<string, unknown>>(validator: BodyValidator<T>, options: UseFormOptions<T>): UseFormResult<T> {
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useTanstackFormFor(
     options.defaultValues,
@@ -68,8 +74,10 @@ export function useForm<T extends Record<string, unknown>>(validator: BodyValida
       try {
         await options.onSubmit(value);
       } catch (e) {
-        if (isApiError(e)) setServerErrors(e.fieldErrors);
-        else throw e;
+        if (isApiError(e)) {
+          setServerErrors(e.fieldErrors);
+          if (Object.keys(e.fieldErrors).length === 0) setSubmitError(e.userMessage);
+        } else throw e;
       }
     },
   );
@@ -96,6 +104,7 @@ export function useForm<T extends Record<string, unknown>>(validator: BodyValida
 
   const setValue = useCallback(
     (name: string, value: unknown) => {
+      setSubmitError(null);
       setServerErrors((prev) => {
         const key = locationOf(name);
         if (!(key in prev)) return prev;
@@ -125,6 +134,7 @@ export function useForm<T extends Record<string, unknown>>(validator: BodyValida
       e?.preventDefault();
       e?.stopPropagation();
       setServerErrors({});
+      setSubmitError(null);
       await form.handleSubmit();
     },
     [form],
@@ -132,12 +142,14 @@ export function useForm<T extends Record<string, unknown>>(validator: BodyValida
 
   const reset = useCallback(() => {
     setServerErrors({});
+    setSubmitError(null);
     form.reset();
   }, [form]);
 
   return {
     values,
     errors,
+    submitError,
     isValid: Object.keys(clientErrors).length === 0,
     isSubmitting,
     field,

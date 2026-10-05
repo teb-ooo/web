@@ -100,3 +100,23 @@ describe("useListTable over a list of more than one page", () => {
     expect(result.current.params.limit).toBe(10);
   });
 });
+
+describe("useListTable while a page change is loading", () => {
+  it("ignores a second Next until the first page has arrived (no page shown under the next one's range)", async () => {
+    const slow = async (p: ListParams) => {
+      await new Promise((r) => setTimeout(r, 40));
+      return serve(p);
+    };
+    const useSlow = (params: ListParams) => useQuery({ queryKey: ["slow", params], queryFn: () => slow(params), placeholderData: keepPreviousData });
+    const { result } = renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }, { status?: string }>({ useList: useSlow, debounceMs: 5, filters: { status: undefined } }), { wrapper });
+    await waitFor(() => expect(result.current.table.rows.length).toBe(25));
+    act(() => result.current.table.pagination.onPageChange(1));
+    expect(result.current.table.pagination.hasNext).toBe(false);
+    act(() => result.current.table.pagination.onPageChange(2));
+    await waitFor(() => expect(result.current.table.rows[0]?.name).toBe("row-26"));
+    await new Promise((r) => setTimeout(r, 120));
+    expect(result.current.table.pagination.page).toBe(1);
+    expect(result.current.params.cursor).toBe("25");
+    expect(result.current.table.rows[0]?.name).toBe("row-26");
+  });
+});

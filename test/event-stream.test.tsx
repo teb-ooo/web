@@ -107,6 +107,22 @@ describe("useEventStream (GET)", () => {
     expect(delays).toEqual([500, 1000]);
   });
 
+  it("a stream that stayed open resets the backoff even if it only carried comments; one that dropped at once keeps backing off", async () => {
+    const comments = () => sseResponse([": ping\n\n"]);
+    const run = async (now: () => number) => {
+      let n = 0;
+      server.use(http.get(URL_, () => (++n <= 4 ? comments() : sseResponse(["event: done\ndata: {}\n\n"]))));
+      const { delays, sleep } = fastSleep();
+      const { result, unmount } = renderHook(() => useEventStream(URL_, {}, { sleep, now, reconnect: { random: () => 1 } }));
+      await waitFor(() => expect(result.current.status).toBe("closed"));
+      unmount();
+      return delays;
+    };
+    let t = 0;
+    expect(await run(() => (t += 30_000))).toEqual([500, 500, 500, 500]);
+    expect(await run(() => 0)).toEqual([500, 1000, 2000, 4000]);
+  });
+
   it("uses the server's retry: value for the delay", async () => {
     let n = 0;
     server.use(

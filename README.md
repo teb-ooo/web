@@ -24,6 +24,7 @@ function NewItem() {
     <form onSubmit={form.handleSubmit}>
       <input value={title.value} onChange={(e) => title.onChange(e.target.value)} onBlur={title.onBlur} />
       {title.error}
+      {form.submitError ? <p role="alert">{form.submitError}</p> : null /* a conflict or server error with no field to put it on (0.9.7) */}
     </form>
   );
 }

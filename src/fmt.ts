@@ -8,12 +8,17 @@ function toDate(v: DateInput): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Intl.DateTimeFormat refuses dateStyle or timeStyle together with these field options, so the style defaults apply only
+// when the caller asked for no field.
+const FIELD_OPTIONS = ["weekday", "era", "year", "month", "day", "dayPeriod", "hour", "minute", "second", "fractionalSecondDigits", "timeZoneName"] as const;
+const hasField = (o: Intl.DateTimeFormatOptions | undefined): boolean => o !== undefined && FIELD_OPTIONS.some((k) => o[k] !== undefined);
+
 /** Date only, e.g. "Sep 29, 2026", in the playground locale and timezone. Empty string for missing/invalid input. */
 export function fmtDate(v: DateInput, options?: Intl.DateTimeFormatOptions): string {
   const d = toDate(v);
   if (!d) return "";
   const { locale, timezone } = getPlayground();
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: timezone, ...options }).format(d);
+  return new Intl.DateTimeFormat(locale, { ...(hasField(options) ? {} : { dateStyle: "medium" as const }), timeZone: timezone, ...options }).format(d);
 }
 
 /** Date and time, e.g. "Sep 29, 2026, 6:30 AM". Empty string for missing/invalid input. */
@@ -22,8 +27,7 @@ export function fmtDateTime(v: DateInput, options?: Intl.DateTimeFormatOptions):
   if (!d) return "";
   const { locale, timezone } = getPlayground();
   return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
+    ...(hasField(options) ? {} : { dateStyle: "medium" as const, timeStyle: "short" as const }),
     timeZone: timezone,
     ...options,
   }).format(d);
