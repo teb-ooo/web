@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { isApiError } from "./api-error.js";
 
 /** The sort a table reports: the column id and a direction. Same shape as `@teb-ooo/ui`'s `Sort`. */
@@ -57,6 +58,15 @@ export interface ListTableOptions<T, D, F extends ListFilters = ListFilters, Q e
   paramNames?: { q?: string; limit?: string; cursor?: string; sort?: string };
   /** How a sort is written in the `sort` parameter. Default: the column id, with a leading `-` for descending. */
   formatSort?: (sort: ListSort) => string;
+  /** Reads a sort back from the address; needed only with a custom `formatSort` and `urlState`. Default: the inverse of the default format. */
+  parseSort?: (text: string) => ListSort | null;
+  /**
+   * Keep the search, the filters, the sort and the page size in the address (`?q=...&status=open&sort=-created&limit=50`)
+   * so a reload, a shared link and a bookmark restore them. The address is replaced (the back button does not step through
+   * keystrokes), the page always starts at the first, and a filter that is off is left out. Filter names are used as they
+   * are, so keep them from clashing with the page's own search parameters. @default false
+   */
+  urlState?: boolean;
 }
 
 export interface ListTableResult<T, F extends ListFilters, Q extends object = ListParams> {
@@ -107,6 +117,14 @@ const defaultSelect = <T, D>(data: D): { rows: T[]; nextCursor?: string | null |
 };
 
 const defaultFormatSort = (s: ListSort): string => (s.direction === "desc" ? "-" : "") + s.columnId;
+const defaultParseSort = (t: string): ListSort | null => (t === "" ? null : t.startsWith("-") ? { columnId: t.slice(1), direction: "desc" } : { columnId: t, direction: "asc" });
+
+/** A filter value read from the address, typed like the filter's initial value (a number or a boolean when it was one). */
+function readFilter(text: string, initial: unknown): string | number | boolean | undefined {
+  if (typeof initial === "number") return text !== "" && Number.isFinite(Number(text)) ? Number(text) : undefined;
+  if (typeof initial === "boolean") return text === "true" ? true : text === "false" ? false : undefined;
+  return text === "" ? undefined : text;
+}
 
 /**
  * Drives a `DataTable` from a server-paginated list operation, so searching, filtering and sorting happen on the server
@@ -122,11 +140,28 @@ export function useListTable<T, D, F extends ListFilters = ListFilters, Q extend
     if (taken.has(k)) throw new Error(`useListTable: the filter "${k}" collides with a parameter the hook owns (${[...taken].join(", ")}); rename it or the parameter with paramNames`);
   }
 
-  const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [filters, setFilters] = useState<F>((options.filters ?? {}) as F);
-  const [sort, setSort] = useState<ListSort | null>(options.sort ?? null);
-  const [pageSize, setPageSize] = useState(options.pageSize ?? 25);
+  const { urlState = false, parseSort = formatSort === defaultFormatSort ? defaultParseSort : undefined } = options;
+  const router = useRouter({ warn: false }) as ReturnType<typeof useRouter> | undefined;
+  // Read once, on mount, from the address (when asked): the first render already has the restored state.
+  const fromUrl = useRef<URLSearchParams | null>(null);
+  if (fromUrl.current === null) fromUrl.current = urlState && typeof window !== "undefined" ? new URLSearchParams(router ? router.state.location.searchStr : window.location.search) : new URLSearchParams();
+  const url = fromUrl.current;
+  const initialFilters = useMemo(() => {
+    const base = { ...options.filters } as Record<string, unknown>;
+    if (urlState) for (const k of Object.keys(base)) if (url.has(k)) base[k] = readFilter(url.get(k) ?? "", base[k]);
+    return base as F;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const initialPageSize = (() => {
+    const n = Number(url.get(names.limit));
+    return urlState && Number.isFinite(n) && n > 0 ? n : (options.pageSize ?? 25);
+  })();
+
+  const [query, setQuery] = useState(urlState ? (url.get(names.q) ?? "") : "");
+  const [debounced, setDebounced] = useState(urlState ? (url.get(names.q) ?? "").trim() : "");
+  const [filters, setFilters] = useState<F>(initialFilters);
+  const [sort, setSort] = useState<ListSort | null>(() => (urlState && url.has(names.sort) && parseSort ? parseSort(url.get(names.sort) ?? "") : null) ?? options.sort ?? null);
+  const [pageSize, setPageSize] = useState(initialPageSize);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(query.trim()), debounceMs);
@@ -138,6 +173,29 @@ export function useListTable<T, D, F extends ListFilters = ListFilters, Q extend
   // Any change of search, filters, sort or page size starts again from the first page.
   const current = paging.signature === signature ? paging : { signature, cursors: [undefined], page: 0 };
   if (paging.signature !== signature) setPaging(current);
+
+  // Keep the address in step with the state (replacing the entry; the first run only normalises what was read).
+  useEffect(() => {
+    if (!urlState || typeof window === "undefined") return;
+    const patch: Record<string, string | undefined> = {
+      [names.q]: debounced === "" ? undefined : debounced,
+      [names.sort]: sort ? formatSort(sort) : undefined,
+      [names.limit]: pageSize === (options.pageSize ?? 25) ? undefined : String(pageSize),
+    };
+    for (const [k, v] of Object.entries(filters)) patch[k] = v === undefined || v === "" ? undefined : String(v);
+    const current = new URLSearchParams(router ? router.state.location.searchStr : window.location.search);
+    const next = new URLSearchParams(current);
+    for (const [k, v] of Object.entries(patch)) if (v === undefined) next.delete(k);
+    else next.set(k, v);
+    if (next.toString() === current.toString()) return;
+    if (router) {
+      void router.navigate({ to: ".", search: ((prev: Record<string, unknown>) => ({ ...prev, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v])) })) as never, replace: true, resetScroll: false });
+    } else {
+      const qs = next.toString();
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlState, debounced, filters, sort, pageSize]);
 
   const params = useMemo<ListParams>(() => {
     const p: ListParams = { [names.limit]: pageSize };

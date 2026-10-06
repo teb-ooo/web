@@ -151,3 +151,42 @@ describe("useListTable: collisions and loading", () => {
   });
 });
 
+describe("useListTable with urlState", () => {
+  const setup2 = () => renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }, { status?: string; archived?: boolean }>({ useList: useRows, debounceMs: 5, urlState: true, filters: { status: undefined, archived: false } }), { wrapper });
+  const reset = () => window.history.replaceState(null, "", "/");
+
+  it("restores the search, filters, sort and page size from the address on mount", async () => {
+    window.history.replaceState(null, "", "/?q=row-1&status=open&archived=true&sort=-name&limit=10");
+    const { result } = setup2();
+    expect(result.current.query).toBe("row-1");
+    expect(result.current.filters).toEqual({ status: "open", archived: true });
+    expect(result.current.sort).toEqual({ columnId: "name", direction: "desc" });
+    expect(result.current.table.pagination.pageSize).toBe(10);
+    await waitFor(() => expect(result.current.params).toMatchObject({ q: "row-1", status: "open", archived: true, sort: "-name", limit: 10 }));
+    reset();
+  });
+
+  it("writes changes back to the address (replacing it), leaves off filters out, and keeps other parameters", async () => {
+    window.history.replaceState(null, "", "/?tab=2");
+    const { result } = setup2();
+    act(() => result.current.setFilter("status", "closed"));
+    act(() => result.current.setQuery("abc"));
+    await waitFor(() => expect(window.location.search).toContain("status=closed"));
+    await waitFor(() => expect(window.location.search).toContain("q=abc"));
+    expect(window.location.search).toContain("tab=2");
+    act(() => result.current.clearFilters());
+    await waitFor(() => expect(window.location.search).toBe("?tab=2"));
+    reset();
+  });
+
+  it("does nothing to the address without urlState", async () => {
+    window.history.replaceState(null, "", "/?q=keep");
+    const { result } = renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }>({ useList: useRows, debounceMs: 5 }), { wrapper });
+    act(() => result.current.setQuery("other"));
+    await new Promise((r) => setTimeout(r, 40));
+    expect(window.location.search).toBe("?q=keep");
+    expect(result.current.query).toBe("other");
+    reset();
+  });
+});
+

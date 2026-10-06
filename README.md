@@ -137,6 +137,8 @@ return (
 
 `useListTable` (0.9.12) is typed by the operation: pass the generated query type as the fourth generic (`useListTable<Row, Data, Filters, QueryOf<"/api/issues">>`) and a misspelt filter name, a wrong value type or a name the hook owns (`q`, `limit`, `cursor`, `sort`) is a type error; filters may be strings, numbers or booleans; `table.loading` is true for a first load and a page change, not for a quiet refetch of the same page.
 
+`urlState: true` (0.9.13) keeps the search, the filters (typed like their initial values), the sort and the page size in the address (`?q=...&status=open&sort=-created&limit=50`), read once on mount from the router's search (or the window's without a router) and written back by replacing the entry; the page always starts at the first. Give a custom `formatSort` a `parseSort` too.
+
 ## Errors and requests outside the generated client
 
 `describeError(error)` (0.9.10) turns any error a query, a mutation or a request holds into one sentence safe to show: an `ApiError` says its `userMessage`, a problem document its `detail` or `title`, a network failure that the server could not be reached, anything else a generic try-again line; a thrown `Error`'s own message is never shown. Use it instead of a local copy.
