@@ -26,6 +26,16 @@ describe("platformDomain", () => {
   });
 });
 
+describe("platformUrl on staging", () => {
+  it("stays on staging when the server says env is staging, and on production otherwise", () => {
+    window.__PLAYGROUND__ = { platform_domain: "example.test", env: "staging" };
+    expect(platformUrl("ah", "/")).toBe("https://ah-staging.example.test/");
+    expect(platformLinks().every((l) => l.href.includes("-staging.example.test"))).toBe(true);
+    window.__PLAYGROUND__ = { platform_domain: "example.test", env: "production" };
+    expect(platformUrl("ah", "/")).toBe("https://ah.example.test/");
+  });
+});
+
 describe("platformLinks", () => {
   it("lists the profile, dashboard, tracker and design system on the platform domain", () => {
     window.__PLAYGROUND__ = { platform_domain: "example.test" };

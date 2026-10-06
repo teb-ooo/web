@@ -24,10 +24,21 @@ export function platformDomain(hostname: string = typeof window === "undefined" 
   return labels.length < 3 ? null : labels.slice(1).join(".");
 }
 
-/** `https://<app>.<platform domain>/<path>`, or null when the domain is unknown (local development). */
+/** True on a staging address: the server says `env` is staging, or the host's first label ends in `-staging`. */
+function onStaging(): boolean {
+  if (getPlayground().env === "staging") return true;
+  const host = typeof window === "undefined" ? "" : window.location.hostname;
+  return (host.split(".")[0] ?? "").endsWith("-staging");
+}
+
+/**
+ * `https://<app>.<platform domain>/<path>`, or null when the domain is unknown (local development). On a staging address
+ * the link stays on staging (`https://<app>-staging.<platform domain>/<path>`), so the dashboard link of `ui-staging` goes
+ * to `ah-staging`, not to production.
+ */
 export function platformUrl(app: string, path = "/"): string | null {
   const domain = platformDomain();
-  return domain === null ? null : `https://${app}.${domain}${path}`;
+  return domain === null ? null : `https://${app}${onStaging() ? "-staging" : ""}.${domain}${path}`;
 }
 
 interface LinkSpec {
