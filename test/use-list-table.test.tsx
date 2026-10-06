@@ -120,3 +120,34 @@ describe("useListTable while a page change is loading", () => {
     expect(result.current.table.rows[0]?.name).toBe("row-26");
   });
 });
+
+describe("useListTable: collisions and loading", () => {
+  it("refuses a filter named like a parameter the hook owns", () => {
+    expect(() => renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }>({ useList: useRows, filters: { limit: "5" } }), { wrapper })).toThrow(/collides/);
+    // renamed, the old name is free
+    expect(() => renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }>({ useList: useRows, filters: { limit: "5" }, paramNames: { limit: "page_size" } }), { wrapper })).not.toThrow();
+  });
+
+  it("is loading for the first load and a page change, not for a quiet refetch of the same page", async () => {
+    const slow = (p: ListParams) => new Promise<{ items: Row[]; next_cursor?: string }>((r) => setTimeout(() => r(serve(p)), 30));
+    const useSlow = (params: ListParams) => useQuery({ queryKey: ["quiet", params], queryFn: () => slow(params), placeholderData: keepPreviousData });
+    const { result } = renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }>({ useList: useSlow, debounceMs: 5 }), { wrapper });
+    expect(result.current.table.loading).toBe(true);
+    await waitFor(() => expect(result.current.table.rows.length).toBe(25));
+    expect(result.current.table.loading).toBe(false);
+    act(() => result.current.table.onRetry());
+    await waitFor(() => expect(result.current.isFetching).toBe(true), { interval: 2 });
+    expect(result.current.table.loading).toBe(false);
+    await waitFor(() => expect(result.current.isFetching).toBe(false));
+    act(() => result.current.table.pagination.onPageChange(1));
+    await waitFor(() => expect(result.current.table.loading).toBe(true));
+    await waitFor(() => expect(result.current.table.loading).toBe(false));
+  });
+
+  it("passes a boolean or number filter through as it is", async () => {
+    const { result } = renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }>({ useList: useRows, debounceMs: 5, filters: { archived: false, min: 3 } }), { wrapper });
+    await waitFor(() => expect(result.current.table.rows.length).toBe(25));
+    expect(result.current.params).toMatchObject({ archived: false, min: 3 });
+  });
+});
+

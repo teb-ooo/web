@@ -135,6 +135,8 @@ return (
 - **Options:** `select(data) => { rows, nextCursor }` (default `data.items` and `data.next_cursor`), `paramNames` ({ q, limit, cursor, sort }), `formatSort`, `debounceMs` (250), `pageSize` (25).
 - The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page and the real count on the last one.
 
+`useListTable` (0.9.12) is typed by the operation: pass the generated query type as the fourth generic (`useListTable<Row, Data, Filters, QueryOf<"/api/issues">>`) and a misspelt filter name, a wrong value type or a name the hook owns (`q`, `limit`, `cursor`, `sort`) is a type error; filters may be strings, numbers or booleans; `table.loading` is true for a first load and a page change, not for a quiet refetch of the same page.
+
 ## Errors and requests outside the generated client
 
 `describeError(error)` (0.9.10) turns any error a query, a mutation or a request holds into one sentence safe to show: an `ApiError` says its `userMessage`, a problem document its `detail` or `title`, a network failure that the server could not be reached, anything else a generic try-again line; a thrown `Error`'s own message is never shown. Use it instead of a local copy.

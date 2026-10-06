@@ -7,11 +7,21 @@ export interface ListSort {
   direction: "asc" | "desc";
 }
 
-/** Filter values: a string per filter; an empty string or undefined means the filter is off. */
-export type ListFilters = Record<string, string | undefined>;
+/** Filter values (a string, a number or a boolean per filter); an empty string or undefined means the filter is off. */
+export type ListFilters = Record<string, string | number | boolean | undefined>;
 
 /** What the list operation is asked: its query parameters, built from the table's state. */
-export type ListParams = Record<string, string | number | undefined>;
+export type ListParams = Record<string, string | number | boolean | undefined>;
+
+/** The parameter names the hook owns; a filter may not use them (unless `paramNames` renames them). */
+type BuiltInParam = "q" | "limit" | "cursor" | "sort";
+
+/**
+ * The filters an operation's query type allows: every query parameter except the ones the hook owns, each with its own
+ * type. With the generated query type as `Q`, a misspelt filter name, a wrong value type or a name the hook owns is a type
+ * error (every key of `F` must be a parameter of `Q`, and a built-in one maps to `never`).
+ */
+export type ValidFilters<F, Q> = { [K in keyof F]: K extends BuiltInParam ? never : K extends keyof Q ? Q[K] : never };
 
 /** What `useList` must return: the parts of a TanStack Query result the table needs (the generated hooks return this). */
 export interface ListQuery<D> {
@@ -24,17 +34,17 @@ export interface ListQuery<D> {
   refetch: () => unknown;
 }
 
-export interface ListTableOptions<T, D, F extends ListFilters> {
+export interface ListTableOptions<T, D, F extends ListFilters = ListFilters, Q extends object = ListParams> {
   /**
    * The generated list hook, called with the params this hook builds. Keep the previous page on screen while the next loads
    * with `placeholderData: keepPreviousData`:
    * `(params) => $api.useQuery("get", "/api/issues", { params: { query: params } }, { placeholderData: keepPreviousData })`.
    */
-  useList: (params: ListParams) => ListQuery<D>;
+  useList: (params: Q) => ListQuery<D>;
   /** Reads the rows and the next cursor from a response. Default: `data.items` and `data.next_cursor`. */
   select?: (data: D) => { rows: T[]; nextCursor?: string | null | undefined };
   /** Initial filter values. */
-  filters?: F;
+  filters?: F & ValidFilters<F, Q>;
   /** Initial sort; null for the server's own order. */
   sort?: ListSort | null;
   /** Rows per page: sent as `limit`. @default 25 */
@@ -49,7 +59,7 @@ export interface ListTableOptions<T, D, F extends ListFilters> {
   formatSort?: (sort: ListSort) => string;
 }
 
-export interface ListTableResult<T, F extends ListFilters> {
+export interface ListTableResult<T, F extends ListFilters, Q extends object = ListParams> {
   /** The search box's text, as typed. */
   query: string;
   setQuery: (q: string) => void;
@@ -61,7 +71,7 @@ export interface ListTableResult<T, F extends ListFilters> {
   hasActiveFilters: boolean;
   sort: ListSort | null;
   /** The params last sent to the list operation. */
-  params: ListParams;
+  params: Q;
   isFetching: boolean;
   /** Spread onto `DataTable`: `<DataTable label="Issues" columns={...} rowKey={...} {...table} />`. */
   table: {
@@ -104,9 +114,13 @@ const defaultFormatSort = (s: ListSort): string => (s.direction === "desc" ? "-"
  * size and the cursor stack (Next uses the response's next cursor, Previous goes back through the cursors already seen),
  * resets to the first page whenever any of them changes, and returns props to spread onto `DataTable`.
  */
-export function useListTable<T, D, F extends ListFilters = ListFilters>(options: ListTableOptions<T, D, F>): ListTableResult<T, F> {
+export function useListTable<T, D, F extends ListFilters = ListFilters, Q extends object = ListParams>(options: ListTableOptions<T, D, F, Q>): ListTableResult<T, F, Q> {
   const { useList, select = defaultSelect as (d: D) => { rows: T[]; nextCursor?: string | null | undefined }, pageSizes, debounceMs = 250, paramNames, formatSort = defaultFormatSort } = options;
   const names = { q: "q", limit: "limit", cursor: "cursor", sort: "sort", ...paramNames };
+  const taken = new Set<string>([names.q, names.limit, names.cursor, names.sort]);
+  for (const k of Object.keys(options.filters ?? {})) {
+    if (taken.has(k)) throw new Error(`useListTable: the filter "${k}" collides with a parameter the hook owns (${[...taken].join(", ")}); rename it or the parameter with paramNames`);
+  }
 
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -136,7 +150,7 @@ export function useListTable<T, D, F extends ListFilters = ListFilters>(options:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced, filters, sort, pageSize, current.page, current.cursors, names.limit, names.q, names.sort, names.cursor]);
 
-  const result = useList(params);
+  const result = useList(params as unknown as Q);
   const { rows, nextCursor } = result.data !== undefined ? select(result.data) : { rows: [] as T[], nextCursor: undefined };
   const moreAfterThis = nextCursor !== undefined && nextCursor !== null && nextCursor !== "";
   // While the rows on screen are the previous page's (a page change is loading), their next cursor is not the current page's:
@@ -176,11 +190,12 @@ export function useListTable<T, D, F extends ListFilters = ListFilters>(options:
     clearFilters,
     hasActiveFilters,
     sort,
-    params,
+    params: params as unknown as Q,
     isFetching: result.isFetching,
     table: {
       rows,
-      loading: result.isPending || result.isFetching,
+      // A first load or a page change (the rows on screen are the previous page's); not a quiet refetch of the same page.
+      loading: result.isPending || (result.isFetching && result.isPlaceholderData === true),
       ...(error !== undefined ? { error } : {}),
       onRetry: () => void result.refetch(),
       sort,

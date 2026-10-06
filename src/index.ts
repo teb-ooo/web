@@ -69,6 +69,7 @@ export {
   useListTable,
   type ListFilters,
   type ListParams,
+  type ValidFilters,
   type ListQuery,
   type ListSort,
   type ListTableOptions,
