@@ -80,7 +80,7 @@ return (
 - **Options:** `select(data)` (default `data.items` and `data.next_cursor`), `paramNames`, `formatSort`, `parseSort`, `debounceMs` (250), `pageSize` (25), `urlState`.
 
 ## Live data
-`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream (design in the shared docs `live-data.md`, rule UI-xke), so a screen changes within a second or two when someone else changes the data, with no reload. The shell draws the status dot; an app calls it once, at the root:
+`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream (design in the shared docs `live-data.md`, rule UI-yvn), so a screen changes within a second or two when someone else changes the data, with no reload. The shell draws the status dot; an app calls it once, at the root:
 
 ```tsx
 const { status } = useLive(); // "live" | "reconnecting" | "degraded" | "off"
