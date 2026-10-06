@@ -2,6 +2,7 @@
 
 What each release added or changed, newest first. The README describes the package as it is now; this file is the history. Only releases with something to say are listed.
 
+- **0.9.17** `useLive` reads the page's `?live=` flag once per mount: a client-side navigation drops the query string, which turned a page opened with `?live=1` off in a test browser (and `?live=0` on) (from platform, found by notes; https://bd.teb.ooo/ui-kxn3).
 - **0.9.16** `setLoginPath(path)` and `getLoginPath()`: guards and the 401 handler send logged-out visitors to the app's own entrance page when it is set (opt-in, never from that page or an `/auth/` page); login redirects use `location.replace` so Back does not return to a redirecting page (from platform, https://bd.teb.ooo/playground-ljjj).
 - **0.9.15** `createBodyValidator` option `pathParams`; `useLiveStatus` reports the worst of the streams (a degraded one is no longer hidden by a healthy one); README: the event's `id` and `project` are for `onEvent`, and the wire example matches the server.
 - **0.9.14** README rewritten by task; this changelog; a test that the README names every export.
