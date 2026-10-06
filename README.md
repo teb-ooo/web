@@ -135,6 +135,12 @@ return (
 - **Options:** `select(data) => { rows, nextCursor }` (default `data.items` and `data.next_cursor`), `paramNames` ({ q, limit, cursor, sort }), `formatSort`, `debounceMs` (250), `pageSize` (25).
 - The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page and the real count on the last one.
 
+## Errors and requests outside the generated client
+
+`describeError(error)` (0.9.10) turns any error a query, a mutation or a request holds into one sentence safe to show: an `ApiError` says its `userMessage`, a problem document its `detail` or `title`, a network failure that the server could not be reached, anything else a generic try-again line; a thrown `Error`'s own message is never shown. Use it instead of a local copy.
+
+For a call the generated hooks cannot make (a binary upload or download, a browser-only route) use `platformFetch(url, init)` (cookies, `Accept: application/json`, an `X-Request-Id`) and pass the response to `throwIfNotOk` to get an `ApiError` on failure: `const res = await throwIfNotOk(await platformFetch("/api/x/audio", { method: "POST", body }))`, then read `res.blob()`, `res.arrayBuffer()` or `res.json()`.
+
 ## Lint
 
 `npm run lint` runs Oxlint with the template's configuration (`.oxlintrc.json`); `scripts/publish.sh` refuses to publish with lint errors. There is no formatter: formatting is not enforced in this package.

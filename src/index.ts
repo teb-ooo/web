@@ -1,5 +1,5 @@
 export { createApi, shouldRetry, type Api, type CreateApiOptions } from "./api.js";
-export { ApiError, isApiError, type ProblemDetails, type ProblemFieldError } from "./api-error.js";
+export { ApiError, describeError, isApiError, type ProblemDetails, type ProblemFieldError } from "./api-error.js";
 export { createQueryClient } from "./query-client.js";
 export {
   useUser,
@@ -77,7 +77,7 @@ export {
 export { useForm, type FieldBinding, type UseFormOptions, type UseFormResult } from "./use-form.js";
 export { fmtDate, fmtDateTime, fmtRelative, fmtNumber, fmtBytes, type DateInput } from "./fmt.js";
 export { playground, getPlayground, type PlaygroundConfig, type PlaygroundRaw } from "./playground.js";
-export { loginUrl, redirectToLogin, type RedirectFn } from "./request.js";
+export { loginUrl, redirectToLogin, platformFetch, throwIfNotOk, type RedirectFn } from "./request.js";
 export { useHasLiveStream, useLiveStatus } from "./live-status.js";
 export { LOGOUT_PATH, platformDomain, platformLinks, platformUrl, type PlatformLink } from "./platform.js";
 export { formatElapsed, turnElapsedMs, useAgentStatus, type AgentAction, type AgentState, type AgentStatus, type AgentStatusOptions } from "./agent-status.js";

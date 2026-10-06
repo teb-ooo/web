@@ -105,3 +105,20 @@ export class ApiError extends Error implements ProblemDetails {
 export function isApiError(e: unknown): e is ApiError {
   return e instanceof ApiError;
 }
+
+/**
+ * One plain sentence for any error a query, a mutation or a request can hold, safe to show a person: an `ApiError` says
+ * its `userMessage`; a problem document (the error body the generated client returns) says its `detail`, else its
+ * `title`; a network failure says the server could not be reached; anything else is a generic try-again sentence. A thrown
+ * `Error`'s own `message` is for the log and is never shown.
+ */
+export function describeError(error: unknown): string {
+  if (isApiError(error)) return error.userMessage;
+  if (isRecord(error)) {
+    const { detail, title } = error;
+    if (typeof detail === "string" && detail !== "") return detail;
+    if (typeof title === "string" && title !== "") return title;
+  }
+  if (error instanceof TypeError) return "The server could not be reached. Check your connection and try again.";
+  return "Something went wrong. Try again.";
+}
