@@ -56,7 +56,7 @@ export interface EventStreamOptions {
   onOpen?: () => void;
   onError?: (error: Error) => void;
   onClose?: () => void;
-  /** Called with the login URL on a 401. Default `window.location.assign`. */
+  /** Called with the login URL on a 401. Default `window.location.replace`. */
   redirect?: RedirectFn;
   requestId?: () => string;
   /** Which failing HTTP statuses are retried with backoff. Default: 5xx, 408 and 429. */

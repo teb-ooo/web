@@ -17,7 +17,7 @@ export interface CreateApiOptions {
   headers?: Record<string, string>;
   /** Injectable fetch (tests). Resolved per request, so msw and other patches of globalThis.fetch work. */
   fetch?: typeof globalThis.fetch;
-  /** Called with the login URL on a 401. Default: `window.location.assign`. Injectable for tests. */
+  /** Called with the login URL on a 401. Default: `window.location.replace`. Injectable for tests. */
   redirect?: RedirectFn;
   /** Default: the path set with `setLoginPath`, else "/auth/login". */
   loginPath?: string;

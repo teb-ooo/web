@@ -24,7 +24,7 @@ export interface GuardArgs {
 
 export interface GuardOptions extends AuthOptions {
   loginPath?: string;
-  /** How the browser is sent to the login page: a full document load (default `window.location.assign`). */
+  /** How the browser is sent to the login page: a full document load (default `window.location.replace`, so Back does not return to a redirecting page). */
   redirect?: RedirectFn;
 }
 

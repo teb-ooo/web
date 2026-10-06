@@ -45,7 +45,7 @@ export function loginUrl(next: string, loginPath: string = configuredLoginPath):
 export type RedirectFn = (url: string) => void;
 
 export const defaultRedirect: RedirectFn = (url) => {
-  window.location.assign(url);
+  window.location.replace(url);
 };
 
 /** Sends the browser to the login page. Does nothing when already on an `/auth/` page or on the login page itself (no redirect loops). */
