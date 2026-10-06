@@ -1,7 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { ensureUser, type AuthOptions, type User } from "./auth.js";
-import { DEFAULT_LOGIN_PATH, defaultRedirect, loginUrl, type RedirectFn } from "./request.js";
+import { defaultRedirect, getLoginPath, loginUrl, type RedirectFn } from "./request.js";
 
 /** Thrown by `RequireAdmin` for a signed-in non-admin when no `redirectTo` is configured. */
 export class ForbiddenError extends Error {
@@ -41,7 +41,7 @@ export function requireUser(opts: GuardOptions = {}) {
       // The login page is served by the Go app, not a client route, and TanStack Router treats a same-origin
       // `href` as a client-side navigation (the SPA would land on a not-found page). So load the document, and
       // never resolve: the page is going away, and the route must not render or load anything meanwhile.
-      (opts.redirect ?? defaultRedirect)(loginUrl(location.href, opts.loginPath ?? DEFAULT_LOGIN_PATH));
+      (opts.redirect ?? defaultRedirect)(loginUrl(location.href, opts.loginPath ?? getLoginPath()));
       return new Promise<never>(() => undefined);
     }
     return { user };

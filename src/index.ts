@@ -79,7 +79,15 @@ export {
 export { useForm, type FieldBinding, type UseFormOptions, type UseFormResult } from "./use-form.js";
 export { fmtDate, fmtDateTime, fmtRelative, fmtNumber, fmtBytes, type DateInput } from "./fmt.js";
 export { playground, getPlayground, type PlaygroundConfig, type PlaygroundRaw } from "./playground.js";
-export { loginUrl, redirectToLogin, platformFetch, throwIfNotOk, type RedirectFn } from "./request.js";
+export {
+  getLoginPath,
+  loginUrl,
+  platformFetch,
+  redirectToLogin,
+  setLoginPath,
+  throwIfNotOk,
+  type RedirectFn,
+} from "./request.js";
 export { useHasLiveStream, useLiveStatus } from "./live-status.js";
 export { LOGOUT_PATH, platformDomain, platformLinks, platformUrl, type PlatformLink } from "./platform.js";
 export { formatElapsed, turnElapsedMs, useAgentStatus, type AgentAction, type AgentState, type AgentStatus, type AgentStatusOptions } from "./agent-status.js";

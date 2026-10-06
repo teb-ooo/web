@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { isRedirect } from "@tanstack/react-router";
+import { redirectToLogin, setLoginPath } from "../src/request.js";
 import { RequireAdmin, RequireUser, ForbiddenError, requireAdmin, requireUser } from "../src/guards.js";
 import { HttpResponse, createTestQueryClient, http, problemResponse, setupMswServer } from "../src/testing.js";
 
@@ -83,5 +84,21 @@ describe("route guards", () => {
     await RequireUser(a);
     await RequireAdmin(a);
     expect(hits).toBe(1);
+  });
+});
+
+describe("setLoginPath (the app's own entrance page)", () => {
+  afterEach(() => setLoginPath("/auth/login"));
+
+  it("sends the guard and the 401 handler to the configured path, and not from the path itself", async () => {
+    setLoginPath("/enter");
+    server.use(http.get(ME, () => problemResponse(401)));
+    const urls: string[] = [];
+    void requireUser({ redirect: (u) => urls.push(u) })(args());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(urls).toEqual(["/enter?next=%2Fadmin%2Fusers%3Fpage%3D2"]);
+    redirectToLogin({ next: "/enter?next=%2F", redirect: (u) => urls.push(u) });
+    redirectToLogin({ next: "/auth/login", redirect: (u) => urls.push(u) });
+    expect(urls).toHaveLength(1);
   });
 });

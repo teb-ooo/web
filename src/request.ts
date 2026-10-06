@@ -3,6 +3,22 @@ import { ApiError } from "./api-error.js";
 export const REQUEST_ID_HEADER = "X-Request-Id";
 export const DEFAULT_LOGIN_PATH = "/auth/login";
 
+let configuredLoginPath = DEFAULT_LOGIN_PATH;
+
+/**
+ * Where a logged-out visitor is sent when a guard or the 401 handler has no `loginPath` of its own. Call it once at start
+ * (main.tsx) to send visitors to the app's own entrance page (for example "/enter", which then links to "/auth/login")
+ * instead of straight to the identity provider. Default "/auth/login".
+ */
+export function setLoginPath(path: string): void {
+  configuredLoginPath = path;
+}
+
+/** The path set by `setLoginPath`, "/auth/login" until then. */
+export function getLoginPath(): string {
+  return configuredLoginPath;
+}
+
 /** UUID v4 for `X-Request-Id`. Uses crypto.randomUUID, with a getRandomValues fallback for insecure contexts. */
 export function newRequestId(): string {
   const c = globalThis.crypto;
@@ -22,7 +38,7 @@ export function currentPath(): string {
   return window.location.pathname + window.location.search;
 }
 
-export function loginUrl(next: string, loginPath: string = DEFAULT_LOGIN_PATH): string {
+export function loginUrl(next: string, loginPath: string = configuredLoginPath): string {
   return `${loginPath}?next=${encodeURIComponent(next)}`;
 }
 
@@ -32,11 +48,11 @@ export const defaultRedirect: RedirectFn = (url) => {
   window.location.assign(url);
 };
 
-/** Sends the browser to the login page. Does nothing when already on an `/auth/` page (no redirect loops). */
+/** Sends the browser to the login page. Does nothing when already on an `/auth/` page or on the login page itself (no redirect loops). */
 export function redirectToLogin(opts: { redirect?: RedirectFn; loginPath?: string; next?: string } = {}): void {
-  const loginPath = opts.loginPath ?? DEFAULT_LOGIN_PATH;
+  const loginPath = opts.loginPath ?? configuredLoginPath;
   const next = opts.next ?? currentPath();
-  if (next.startsWith("/auth/")) return;
+  if (next.startsWith("/auth/") || next === loginPath || next.startsWith(`${loginPath}?`)) return;
   (opts.redirect ?? defaultRedirect)(loginUrl(next, loginPath));
 }
 

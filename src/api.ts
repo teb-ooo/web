@@ -2,7 +2,6 @@ import createFetchClient, { type Client, type ClientOptions } from "openapi-fetc
 import createQueryBindings, { type OpenapiQueryClient } from "openapi-react-query";
 import { isApiError } from "./api-error.js";
 import {
-  DEFAULT_LOGIN_PATH,
   defaultBaseUrl,
   newRequestId,
   redirectToLogin,
@@ -20,7 +19,7 @@ export interface CreateApiOptions {
   fetch?: typeof globalThis.fetch;
   /** Called with the login URL on a 401. Default: `window.location.assign`. Injectable for tests. */
   redirect?: RedirectFn;
-  /** Default "/auth/login". */
+  /** Default: the path set with `setLoginPath`, else "/auth/login". */
   loginPath?: string;
   /** Set false to disable the 401 redirect (the ApiError is still thrown). Default true. */
   redirectOn401?: boolean;
@@ -45,13 +44,13 @@ export type Api<Paths extends {}> = OpenapiQueryClient<Paths> & {
 export function createApi<Paths extends {}>(opts: CreateApiOptions = {}): Api<Paths> {
   const requestId = opts.requestId ?? newRequestId;
   const redirectOn401 = opts.redirectOn401 ?? true;
-  const loginPath = opts.loginPath ?? DEFAULT_LOGIN_PATH;
 
   const playgroundFetch = async (input: Request): Promise<Response> => {
     const doFetch = opts.fetch ?? globalThis.fetch;
     const res = await doFetch(withDefaults(input, requestId));
     if (res.status === 401 && redirectOn401) {
-      const redirectOpts: Parameters<typeof redirectToLogin>[0] = { loginPath };
+      const redirectOpts: Parameters<typeof redirectToLogin>[0] = {};
+      if (opts.loginPath) redirectOpts.loginPath = opts.loginPath;
       if (opts.redirect) redirectOpts.redirect = opts.redirect;
       redirectToLogin(redirectOpts);
     }
