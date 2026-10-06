@@ -1,11 +1,13 @@
 # @teb-ooo/web
 
-The non-visual frontend glue for playground apps: a typed API client with TanStack Query bindings, `useUser`/`useIsAdmin` and route guards, an SSE hook, schema-derived forms, and locale-aware formatters. It has no components and no styles, so `@teb-ooo/ui` stays purely atomic. Apps never call `fetch` directly; everything goes through these hooks.
+The non-visual frontend glue for playground apps: a typed API client with TanStack Query bindings, the signed-in user and route guards, schema-derived forms, server-driven lists, live updates, formatters and the test helpers. It has no components and no styles, so `@teb-ooo/ui` stays purely atomic. Apps never call `fetch` directly; everything goes through these (see "Requests outside the generated client").
 
-Run the tests with `npm ci && npm test` (vitest, jsdom, msw; includes type-level tests), and check types with `npm run typecheck`. `npm run build` produces `dist/` (Vite library mode plus `tsc` declarations); `npm run gen:fixture` regenerates `test/fixtures/schema.d.ts` from `test/fixtures/openapi.json`.
+Sections: [A first screen](#a-first-screen) · [API client and errors](#api-client-and-errors) · [Auth and guards](#auth-and-guards) · [Forms](#forms) · [Lists](#lists-uselisttable) · [Live data](#live-data) · [Formatters and the playground](#formatters-and-the-playground) · [Testing](#testing) · [For the shell only](#for-the-shell-only) · [Developing this package](#developing-this-package). The history of releases is in [CHANGELOG.md](CHANGELOG.md).
+
+## A first screen
 
 ```tsx
-import { createApi, useUser, useForm, createBodyValidator, fmtRelative, RequireUser } from "@teb-ooo/web";
+import { createApi, useUser, useForm, createBodyValidator, RequireUser } from "@teb-ooo/web";
 import type { paths } from "./api/schema"; // openapi-typescript output
 import spec from "./api/openapi.json";
 
@@ -24,95 +26,35 @@ function NewItem() {
     <form onSubmit={form.handleSubmit}>
       <input value={title.value} onChange={(e) => title.onChange(e.target.value)} onBlur={title.onBlur} />
       {title.error}
-      {form.submitError ? <p role="alert">{form.submitError}</p> : null /* a conflict or server error with no field to put it on (0.9.7) */}
+      {form.submitError ? <p role="alert">{form.submitError}</p> : null}
     </form>
   );
 }
-
-// route: beforeLoad: RequireUser   (router context must carry { queryClient })
+// route: beforeLoad: RequireUser   (the router context must carry { queryClient })
 ```
 
-Test helpers live in `@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer`, `sseResponse`, `problemResponse`, and (0.9.6) `paletteRouteProblems(spec, routePatterns)`, which lists `x-palette` tags whose `when.route` matches no route of the app.
+## API client and errors
 
-`playground` (from `window.__PLAYGROUND__`) exposes `{ appName, env, claudeSessionUrl, platformDomain, locale, timezone }`.
+- `createApi<paths>(options?)` returns the typed client and the TanStack Query bindings (`api.useQuery("get", "/api/items")`, `api.useMutation(...)`, `api.client`), over `openapi-fetch` and `openapi-react-query`. Every request carries cookies and an `X-Request-Id`; a 401 sends the browser to sign in.
+- `createQueryClient()` is a `QueryClient` with the playground defaults: no retry on a 4xx `ApiError`, one quick retry otherwise (`shouldRetry` is that policy), no refetch on window focus, 30 s staleness.
+- `ApiError` is the one error shape (`status`, `title`, `detail`, `fieldErrors`, `requestId`); `isApiError(e)` narrows. Its `userMessage` is a sentence for a person (a 4xx's detail, a plain line for a 5xx); `message` keeps the raw text for logs.
+- `describeError(error)` turns any error a query, a mutation or a request holds into one sentence safe to show: an `ApiError` says its `userMessage`, a problem document its `detail` or `title`, a network failure that the server could not be reached, anything else a generic try-again line; a thrown `Error`'s own message is never shown. Use it instead of a local copy.
+- `loginUrl(next)` and `redirectToLogin()` build and follow the sign-in address (nothing on an `/auth/` page, so no loops).
 
-## Live data
+### Requests outside the generated client
+For a call the generated hooks cannot make (a binary upload or download, a browser-only route) use `platformFetch(url, init)` (cookies, `Accept: application/json`, an `X-Request-Id`) and pass the response to `throwIfNotOk` to get an `ApiError` on failure:
+`const res = await throwIfNotOk(await platformFetch("/api/x/audio", { method: "POST", body }))`, then read `res.blob()`, `res.arrayBuffer()` or `res.json()`.
 
-`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream ([UI-yvn](https://rb.teb.ooo/UI-yvn), design in the shared docs `live-data.md`), so a screen changes within a second or two when someone else changes the data, with no reload.
+## Auth and guards
+- `useUser()` returns `{ user, isLoading }` (`null` when signed out); `useIsAdmin()`; `fetchUser()` and `ensureUser()` resolve the cached user for a loader (`null` when signed out, never a redirect); `userQueryOptions` and `ME_QUERY_KEY` are the query behind them (invalidate `ME_QUERY_KEY` after login or logout). They ask `/auth/me?optional=1`, so a sign-in page logs no failed request.
+- Route guards: `requireUser()` and `requireAdmin()` return a `beforeLoad` function; `RequireUser` and `RequireAdmin` are the same as components. A signed-in person without the admin role gets a `ForbiddenError` (`isForbiddenError(e)` to draw a "not allowed" page).
 
-```tsx
-import { useLive } from "@teb-ooo/web";
+## Forms
+- `createBodyValidator<Body>(openapiDocument, operationId)` reads the operation's request body schema, so a form cannot submit what the API would reject; `findBodySchema` and `friendlyMessage` ("expected length >= 1" becomes "Enter a value.") are its parts.
+- `useForm(validator, { defaultValues, onSubmit })` (TanStack Form underneath) returns `values`, `errors` (keyed like `ApiError.fieldErrors`, `body.title`), `field(name)` bindings, `fieldError(name)`, `setValue`, `handleSubmit`, `reset`, `isValid`, `isSubmitting` and `submitError`: a sentence for a submit that failed without a field to put it on (a conflict, a server error), cleared on the next submit or edit. An `ApiError` thrown by `onSubmit` becomes field errors; anything else is rethrown.
 
-function Header() {
-  const { status } = useLive(); // once, at the root; status: "live" | "reconnecting" | "degraded" | "off"
-  return <LiveIndicator status={status} />; // from @teb-ooo/ui
-}
-```
-
-- Events say only which resource changed: `event: change`, `data: {"resource":"widgets","version":"..."}`. The queries of that resource are marked stale and refetch through the normal API operation, so authorisation stays the API's. The resource of a query is the first path segment after `/api/` (`widgets` covers `/api/widgets` and `/api/widgets/{id}`); map resources that do not follow the convention with `resources: { beads: ["/api/work/"] }`. An event naming no resource refreshes everything under `paths` (default `["/api/"]`).
-- Events within `debounceMs` (default 300) become one refetch. `onEvent(data, meta)` may return `false` to ignore an event.
-- The stream is open only while the tab is visible. Every (re)open after the first, a dropped connection or a tab shown again, refreshes everything after a random delay of 0 to `jitterMs` (default 2000), so a deploy does not make every tab refetch at once.
-- Status: `live`; `reconnecting` (any non-2xx except 401 is retried with backoff up to 30s); `degraded` (the server sent a `degraded` event: a source it relays is down, so changes may be missed until the next change); `off` (disabled, hidden tab, or a test browser). A 401 sends the browser to sign in.
-- It is off when `navigator.webdriver` is true (Playwright, so `networkidle` settles) or the page has `?live=0`. `force: true` or `?live=1` turns it on, for the one dedicated e2e.
-- There is no polling unless you ask for it: `pollWhenNotLiveMs: 30000` refreshes the `paths` queries at that interval while the stream is not live.
-- Cursor-paged lists built with `useInfiniteQuery` refetch every page loaded so far when invalidated, so a long list costs one request per page it has loaded; keep `pages` bounded (`maxPages`) or prefer a first-page list plus "load more" for screens that stay live for long.
-- `useLive` is built on `useLiveQueries({ url, invalidate, invalidateFor?, ... })` and `matchesPaths(["/api/work/"])`, which are exported for streams with their own shape. Neither patches the cache; they only say what is stale.
-
-### Patterns (from bd, the first real use)
-
-- **A snapshot at connect.** A server may send one `change` per project or resource when the stream opens. If the screen has just loaded that data, the refetch is wasted: remember the last `version` you saw per resource in `onEvent` and return `false` for the first sighting (and for an unchanged version), so nothing refetches at connect.
-- **Deciding what an event touches.** `invalidate` may be a predicate over the query, and it can read a ref that `onEvent` sets: that is how one screen refreshes everything under `/api/work/` for one kind of event and only a counts query for another. With `useLive()` use `invalidateFor`-style narrowing through `resources`, or fall back to `useLiveQueries` for this.
-- **Testing.** An open stream means Playwright's `networkidle` never arrives. `useLive()` stays off under a test browser (`navigator.webdriver`, or `?live=0`) for that reason; if you use `useLiveQueries` directly, cut the stream in the smoke test (`page.route("**/stream", (r) => r.abort("aborted"))`) except in the one test that exercises it.
-- `status` is `reconnecting` while the server answers 503 or 429, with backoff.
-
-## Feedback
-
-`useFeedback()` is the state and actions behind the feedback panel (`FeedbackPanel` in `@teb-ooo/ui`, a dialog). It is reached only through Cmd+K: `useFeedbackCommand(feedback)` from `@teb-ooo/ui/cmdk` registers "Send feedback". No header button.
-
-```tsx
-import { useFeedback } from "@teb-ooo/web";
-import { FeedbackPanel } from "@teb-ooo/ui";
-import { useFeedbackCommand } from "@teb-ooo/ui/cmdk";
-
-function Root() {
-  const feedback = useFeedback();   // once, inside the router and the query provider
-  useFeedbackCommand(feedback);     // "Send feedback" in Cmd+K, only when feedback.available
-  return <FeedbackPanel feedback={feedback} />;
-}
-```
-
-- `available` is true only for the superadmin (`is_admin`) or the app's owner (`is_owner`, from `/auth/me`), and not in a browser that reports `navigator.webdriver` (test browsers; some embedded or automated browsers do too). `force: true` or `?feedback=1` in the address overrides that. A missing `is_owner` counts as false.
-- The panel takes free text, an optional picked element (selector, role, visible text, rectangle; click it on the page, Escape cancels), and an optional screenshot with a preview (html-to-image, loaded only when asked: png, else jpeg, at most 5 MB, nothing masked, the panel itself left out). A line lists what is sent besides the text: the route, the last 20 console errors (kept from the moment the hook mounts), the viewport and the user agent.
-- `submit()` posts multipart to `/_playground/feedback` (`text`, `context` as JSON, optional `screenshot`) and answers `{ bead, agent, status }`. A failure keeps a local draft (the text and the picked element), offered again the next time the panel opens.
-
-Releasing: bump the version, test, tag `vX.Y.Z`, push, `scripts/publish.sh` (the same routine as `@teb-ooo/ui`; it needs `UI_LIB_NPM_PASSWORD`). Check that packages depending on this one still allow the new version first.
-
-## Platform shell data (0.7.0)
-
-The platform bar and palette in `@teb-ooo/ui` (`Shell`) read their data here, so the list can grow without apps changing code.
-
-- `platformLinks()` returns the links every app's Cmd+K carries under its own group: My profile (id), Go to dashboard (ah), Go to work tracker (bd), Go to design system (ui), each as `{ id, title, keywords, href }`. Add a new platform link to `LINK_SPECS` in `src/platform.ts` and every app has it after upgrading.
-- `platformDomain()`, `platformUrl(app, path?)`: the platform domain comes from `window.__PLAYGROUND__.platform_domain` when the server sends it, otherwise from the current host without its first label (`ui-staging.teb.ooo` gives `teb.ooo`); `null` on localhost. `playground.platformDomain` is the raw field.
-- `LOGOUT_PATH` (`/auth/logout`): sign out is a full-page GET navigation.
-- `useLiveStatus()`: the status of the screen's live stream (`live`, `degraded`, `reconnecting`, `off`) for the bar's dot. `useLive` and `useLiveQueries` report to it by themselves; an app calls nothing.
-
-## Signed-out check without a failed request (0.7.1)
-
-`useUser` / `fetchUser` ask `/auth/me?optional=1`. A server on playground-go 0.7.2 or newer answers 200 `{"anonymous":true,...}` when nobody is signed in, which is treated as signed out (`user: null`), so the browser logs no failed request on a sign-in page. An older server ignores the parameter and answers 401, which still means signed out. `AuthOptions.optional: false` asks plain `/auth/me`.
-
-`useHasLiveStream()` (0.7.2) says whether any screen has a live stream mounted; the platform bar shows its dot only then, so an app with no live data shows no indicator.
-
-`useFeedback` opens straight into picking an element (0.7.3): open, click the element, type, Enter. Escape while picking skips the pick. `pickOnOpen: false` opens to the text instead.
-
-## Agent status (0.7.4, action and turn timer 0.7.5)
-
-`useAgentStatus()` polls the platform's `GET /_playground/agent` on the app's own origin every 15 s while the tab is visible and returns `{agent, status, since, summary}` with `status` one of `working`, `idle`, `offline`, `logged_out`; the platform bar's dot on the agent button follows it. Only the superadmin or the app's owner can read it; for anyone else, in a test browser (unless `force`), or when the route is missing or fails, it returns `null` and the bar draws no dot.
-
-From 0.7.5 `useAgentStatus` also returns `action` (`{label, target, since}` or null), `turnStartedAt` (or ""), `serverTime` and `receivedAt`; `turnElapsedMs(state, Date.now())` gives the turn's age on the server's clock and `formatElapsed(ms)` writes it ("4m 12s"). `fast: true` polls every 3 s (`fastMs`) instead of every 15 s, for a popover that is open. An older platform answer simply has no action and no turn.
-
-## Server-driven lists: useListTable
-
-A list the server pages (an operation with `limit`, `cursor` and `next_cursor`) is searched, filtered and sorted by the server through the operation's parameters, never in the client over the rows of one page ([API-bpe](https://rb.teb.ooo/API-bpe)). `useListTable` owns the state for that and returns props for `DataTable` from `@teb-ooo/ui`:
+## Lists: useListTable
+A list the server pages (an operation with `limit`, `cursor` and `next_cursor`) is searched, filtered and sorted by the server through the operation's parameters, never in the client over the rows of one page. `useListTable` owns the state and returns props for `DataTable` from `@teb-ooo/ui`:
 
 ```tsx
 const list = useListTable({
@@ -120,6 +62,7 @@ const list = useListTable({
   filters: { status: undefined as string | undefined },
   sort: { columnId: "updated", direction: "desc" },
   pageSizes: [25, 50, 100],
+  urlState: true,
 });
 return (
   <>
@@ -130,21 +73,40 @@ return (
 );
 ```
 
-- **Owns:** the search text (`query`, sent debounced as `q`), the `filters` (each sent as its own parameter, left out when empty), the `sort` (sent as `sort`, `-name` for descending), the page size (`limit`) and the cursor stack: Next uses the response's `next_cursor`, Previous goes back through the cursors already seen. Any change of search, filter, sort or page size returns to the first page.
-- **Returns:** `table` (spread it onto `DataTable`: `rows`, `loading`, `error` as a sentence with `onRetry`, `sort`, `onSortChange` and `pagination` with `hasNext`), `query`/`setQuery`, `filters`/`setFilter`/`clearFilters`, `hasActiveFilters`, `params` and `isFetching`.
-- **Options:** `select(data) => { rows, nextCursor }` (default `data.items` and `data.next_cursor`), `paramNames` ({ q, limit, cursor, sort }), `formatSort`, `debounceMs` (250), `pageSize` (25).
-- The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page and the real count on the last one.
+- **Owns:** the search text (`query`, sent debounced as `q`), the `filters` (each its own parameter, left out when empty), the `sort` (`-name` for descending), the page size (`limit`) and the cursor stack: Next uses the response's `next_cursor`, Previous goes back through the cursors already seen. Any change of search, filter, sort or page size returns to the first page; Next is ignored while a page change is still loading.
+- **Returns:** `table` (spread onto `DataTable`: `rows`, `loading`, `error` with `onRetry`, `sort`, `onSortChange`, `pagination`), `query`/`setQuery`, `filters`/`setFilter`/`clearFilters`, `hasActiveFilters`, `params`, `isFetching`. `table.loading` is true for a first load and a page change, not for a quiet refetch of the same page. The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page.
+- **Typed by the operation:** pass the generated query type as the fourth generic (`useListTable<Row, Data, Filters, QueryOf<"/api/issues">>`): a misspelt filter, a wrong value type or a name the hook owns (`q`, `limit`, `cursor`, `sort`; `paramNames` renames them) is a type error. Filters may be strings, numbers or booleans.
+- **In the address:** `urlState: true` keeps the search, filters (typed like their initial values), sort and page size in the address (`?q=...&status=open&sort=-created&limit=50`), read once on mount from the router's search (or the window's without a router) and written back by replacing the entry; the page always starts at the first. Give a custom `formatSort` a `parseSort`.
+- **Options:** `select(data)` (default `data.items` and `data.next_cursor`), `paramNames`, `formatSort`, `parseSort`, `debounceMs` (250), `pageSize` (25), `urlState`.
 
-`useListTable` (0.9.12) is typed by the operation: pass the generated query type as the fourth generic (`useListTable<Row, Data, Filters, QueryOf<"/api/issues">>`) and a misspelt filter name, a wrong value type or a name the hook owns (`q`, `limit`, `cursor`, `sort`) is a type error; filters may be strings, numbers or booleans; `table.loading` is true for a first load and a page change, not for a quiet refetch of the same page.
+## Live data
+`useLive()` keeps every generated-hook query current from the app's `/api/live` event stream (design in the shared docs `live-data.md`, rule UI-xke), so a screen changes within a second or two when someone else changes the data, with no reload. The shell draws the status dot; an app calls it once, at the root:
 
-`urlState: true` (0.9.13) keeps the search, the filters (typed like their initial values), the sort and the page size in the address (`?q=...&status=open&sort=-created&limit=50`), read once on mount from the router's search (or the window's without a router) and written back by replacing the entry; the page always starts at the first. Give a custom `formatSort` a `parseSort` too.
+```tsx
+const { status } = useLive(); // "live" | "reconnecting" | "degraded" | "off"
+```
 
-## Errors and requests outside the generated client
+- Events say only which resource changed (`event: change`, `data: {"resource":"widgets","version":"..."}`; the server also sends `project` and `id`, which the hook passes to `onEvent` but does not use to narrow). The queries of that resource are marked stale and refetch through the normal API operation, so authorisation stays the API's. A query's resource is the first path segment after `/api/` (`resourceOfPath`); map the ones that do not follow it with `resources: { beads: ["/api/work/"] }`. An event naming no resource refreshes everything under `paths` (default `["/api/"]`).
+- Events within `debounceMs` (300) become one refetch; `onEvent(data, meta)` may return `false` to ignore one. The stream is open only while the tab is visible. Every reopen after the first refreshes everything after a random delay of 0 to `jitterMs` (2000), so a deploy does not refetch every tab at once.
+- Status: `live`; `reconnecting` (any non-2xx except 401 is retried with backoff up to 30 s, reset after a connection that stayed open); `degraded` (the server said a source it relays is down); `off` (disabled, hidden tab, or a test browser). It is off under `navigator.webdriver` or `?live=0`; `force: true` or `?live=1` turns it on, for the one dedicated e2e.
+- A polling screen stops while the stream is live: `refetchInterval: live ? false : 15000`. Or let the hook do it: `pollWhenNotLiveMs: 30000` refreshes the `paths` queries at that interval while the stream is not live. Use `useLiveStatus()` rather than writing your own live-status context.
+- Cursor-paged lists built with `useInfiniteQuery` refetch every page loaded so far when invalidated: keep `maxPages` bounded, or prefer a first-page list plus "load more" for screens that stay live for long.
+- For streams with their own shape: `useLiveQueries({ url, invalidate, invalidateFor?, ... })` and `matchesPaths(["/api/work/"])`; neither patches the cache, they only say what is stale. `useEventStream(url, handlers, options)` is the general SSE hook (GET or POST, reconnect with `backoffDelay`, `Last-Event-ID`), `runEventStream` its transport and `createSseParser` the parser, for code that is not a React component.
+- **Patterns.** A snapshot at connect: a server may send one `change` per resource when the stream opens; remember the last `version` per resource in `onEvent` and return `false` for the first sighting, so nothing refetches at connect. What an event touches: `invalidate` may be a predicate over the query that reads a ref `onEvent` sets. Testing: an open stream means Playwright's `networkidle` never arrives; `useLive()` stays off under a test browser, and with `useLiveQueries` directly cut the stream in the smoke test (`page.route("**/stream", (r) => r.abort("aborted"))`).
 
-`describeError(error)` (0.9.10) turns any error a query, a mutation or a request holds into one sentence safe to show: an `ApiError` says its `userMessage`, a problem document its `detail` or `title`, a network failure that the server could not be reached, anything else a generic try-again line; a thrown `Error`'s own message is never shown. Use it instead of a local copy.
+## Formatters and the playground
+- `fmtDate`, `fmtDateTime`, `fmtRelative`, `fmtNumber`, `fmtBytes`: in the playground locale and timezone (`en-US` and UTC without them). `fmtDate` and `fmtDateTime` take `Intl.DateTimeFormat` options; the style defaults apply only when you ask for no field.
+- `playground` and `getPlayground()` read `window.__PLAYGROUND__` as `{ appName, env, claudeSessionUrl, platformDomain, locale, timezone }`, each with a safe default.
 
-For a call the generated hooks cannot make (a binary upload or download, a browser-only route) use `platformFetch(url, init)` (cookies, `Accept: application/json`, an `X-Request-Id`) and pass the response to `throwIfNotOk` to get an `ApiError` on failure: `const res = await throwIfNotOk(await platformFetch("/api/x/audio", { method: "POST", body }))`, then read `res.blob()`, `res.arrayBuffer()` or `res.json()`.
+## Testing
+`@teb-ooo/web/testing`: `renderWithProviders`, `setPlayground`, `setupMswServer` (msw), `sseResponse`, `problemResponse`, `createTestQueryClient`, and `paletteRouteProblems(spec, routePatterns)`, which lists `x-palette` tags (decision 0004) whose `when.route` matches no route of the app.
 
-## Lint
+## For the shell only
+These feed the platform bar and Cmd+K in `@teb-ooo/ui` (`Shell`); an app does not call them (the platform-shell test fails an app that does).
+- **Platform links:** `platformLinks()` (My profile, Go to dashboard, Go to work tracker, Go to design system, as `{ id, title, keywords, href }`; add one to `LINK_SPECS` in `src/platform.ts`), `platformDomain()` and `platformUrl(app, path?)` (the domain from `platform_domain`, else the host without its first label; `null` on localhost; links stay on staging when the page is), `LOGOUT_PATH`.
+- **Live status:** `useLiveStatus()` and `useHasLiveStream()` (the bar's dot shows only when a stream is mounted); `useLive` and `useLiveQueries` report to them by themselves.
+- **Feedback:** `useFeedback()` is the state behind `FeedbackPanel`: `available` only for the superadmin or the app's owner and not in a test browser (`force: true` or `?feedback=1` overrides); it opens into picking an element (`pickOnOpen`), keeps `anchor` (the picked element's box), `includeElement`, an optional screenshot (html-to-image, loaded only when asked; png, else jpeg, at most 5 MB; the panel itself is left out) and the context it sends (route, the last 20 console errors, viewport, user agent). `submit()` posts multipart to `/_playground/feedback` and answers `{ bead, agent, status }`; a failure keeps a local draft. Its pieces: `describeElement`, `selectorOf`, `recentConsoleErrors`, `MAX_SCREENSHOT_BYTES`.
+- **Agent status:** `useAgentStatus()` polls `/_playground/agent` every 15 s (`fast: true`: every 3 s) while the tab is visible and returns `{ agent, status, since, summary, action, turnStartedAt, serverTime, receivedAt }` with `status` one of `working`, `idle`, `offline`, `logged_out`; `null` for anyone but the superadmin or the owner, in a test browser, or when the route is missing. `turnElapsedMs(state, Date.now())` and `formatElapsed(ms)` give the turn's age.
 
-`npm run lint` runs Oxlint with the template's configuration (`.oxlintrc.json`); `scripts/publish.sh` refuses to publish with lint errors. There is no formatter: formatting is not enforced in this package.
+## Developing this package
+`npm ci && npm test` (vitest, jsdom, msw; includes type-level tests), `npm run typecheck`, `npm run lint` (Oxlint with the template's configuration; no formatter), `npm run build` (Vite library mode plus `tsc` declarations), `npm run gen:fixture` (regenerates `test/fixtures/schema.d.ts` from `test/fixtures/openapi.json`). Releasing is in [docs/release.md](docs/release.md): `scripts/publish.sh` runs typecheck, lint, tests and the release-age check, and refuses a version `@teb-ooo/ui` would not accept as a peer.
