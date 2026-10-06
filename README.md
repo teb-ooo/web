@@ -39,7 +39,7 @@ function NewItem() {
 - `createQueryClient()` is a `QueryClient` with the playground defaults: no retry on a 4xx `ApiError`, one quick retry otherwise (`shouldRetry` is that policy), no refetch on window focus, 30 s staleness.
 - `ApiError` is the one error shape (`status`, `title`, `detail`, `fieldErrors`, `requestId`); `isApiError(e)` narrows. Its `userMessage` is a sentence for a person (a 4xx's detail, a plain line for a 5xx); `message` keeps the raw text for logs.
 - `describeError(error)` turns any error a query, a mutation or a request holds into one sentence safe to show: an `ApiError` says its `userMessage`, a problem document its `detail` or `title`, a network failure that the server could not be reached, anything else a generic try-again line; a thrown `Error`'s own message is never shown. Use it instead of a local copy.
-- `loginUrl(next)` and `redirectToLogin()` build and follow the sign-in address (nothing on an `/auth/` page, so no loops).
+- `loginUrl(next)` and `redirectToLogin()` build and follow the sign-in address with `window.location.replace`, so Back does not return to a page that redirects (nothing on an `/auth/` page or on the entrance page itself, so no loops). `setLoginPath("/enter")` (once, in `main.tsx`) sends visitors to the app's own entrance page instead of straight to `/auth/login`: guards and the 401 handler use it unless they were given a `loginPath`; `getLoginPath()` reads it. Opt-in; the default stays `/auth/login`.
 
 ### Requests outside the generated client
 For a call the generated hooks cannot make (a binary upload or download, a browser-only route) use `platformFetch(url, init)` (cookies, `Accept: application/json`, an `X-Request-Id`) and pass the response to `throwIfNotOk` to get an `ApiError` on failure:

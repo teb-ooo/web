@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createApi } from "../src/api.js";
+import { setLoginPath } from "../src/request.js";
 import { ApiError, isApiError } from "../src/api-error.js";
 import { HttpResponse, http, problemResponse, setupMswServer } from "../src/testing.js";
 import type { paths } from "./fixtures/schema.js";
@@ -79,6 +80,26 @@ describe("createApi", () => {
     expect(redirect).toHaveBeenCalledExactlyOnceWith("/auth/login?next=%2Fitems%3Ftab%3D2%26q%3Da%2520b");
     expect(err.status).toBe(401);
     window.history.pushState({}, "", "/");
+  });
+
+  it("sends a 401 to the path set with setLoginPath, unless the page is that path, and an option still wins", async () => {
+    server.use(http.get("http://localhost:3000/api/items", () => problemResponse(401)));
+    try {
+      setLoginPath("/enter");
+      window.history.pushState({}, "", "/items");
+      const redirect = vi.fn();
+      await createApi<paths>({ redirect }).client.GET("/api/items").catch(() => undefined);
+      expect(redirect).toHaveBeenLastCalledWith("/enter?next=%2Fitems");
+      await createApi<paths>({ redirect, loginPath: "/sso" }).client.GET("/api/items").catch(() => undefined);
+      expect(redirect).toHaveBeenLastCalledWith("/sso?next=%2Fitems");
+      window.history.pushState({}, "", "/enter");
+      redirect.mockClear();
+      await createApi<paths>({ redirect }).client.GET("/api/items").catch(() => undefined);
+      expect(redirect).not.toHaveBeenCalled();
+    } finally {
+      setLoginPath("/auth/login");
+      window.history.pushState({}, "", "/");
+    }
   });
 
   it("does not redirect when disabled or already on an /auth/ page", async () => {
