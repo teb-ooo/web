@@ -57,7 +57,7 @@ describe("platformLinks", () => {
 });
 
 describe("useLiveStatus", () => {
-  it("is the best status of the mounted streams and off with none", () => {
+  it("is the worst status of the mounted streams and off with none", () => {
     const { result } = renderHook(() => useLiveStatus());
     expect(result.current).toBe("off");
     act(() => publishLiveStatus("a", "reconnecting"));
@@ -65,7 +65,7 @@ describe("useLiveStatus", () => {
     act(() => publishLiveStatus("b", "degraded"));
     expect(result.current).toBe("degraded");
     act(() => publishLiveStatus("c", "live"));
-    expect(result.current).toBe("live");
+    expect(result.current).toBe("degraded"); // one healthy stream does not hide a broken one
     act(() => {
       clearLiveStatus("c");
       clearLiveStatus("b");

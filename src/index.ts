@@ -61,6 +61,7 @@ export {
   findBodySchema,
   friendlyMessage,
   type BodyValidator,
+  type BodyValidatorOptions,
   type FieldErrors,
   type JsonSchema,
   type OpenApiDocument,

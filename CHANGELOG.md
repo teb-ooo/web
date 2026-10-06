@@ -2,6 +2,7 @@
 
 What each release added or changed, newest first. The README describes the package as it is now; this file is the history. Only releases with something to say are listed.
 
+- **0.9.15** `createBodyValidator` option `pathParams`; `useLiveStatus` reports the worst of the streams (a degraded one is no longer hidden by a healthy one); README: the event's `id` and `project` are for `onEvent`, and the wire example matches the server.
 - **0.9.14** README rewritten by task; this changelog; a test that the README names every export.
 - **0.9.13** `useListTable` `urlState` (search, filters, sort and page size in the address).
 - **0.9.12** `useListTable` typed by the operation's query (fourth generic, `ValidFilters`), boolean and number filters, a filter named like a built-in parameter throws, a quiet refetch is not `loading`.

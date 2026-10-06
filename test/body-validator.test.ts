@@ -88,3 +88,39 @@ describe("friendlyMessage", () => {
     expect(friendlyMessage("something the server said")).toBe("something the server said");
   });
 });
+
+describe("createBodyValidator with path parameters", () => {
+  const secretDoc = {
+    paths: {
+      "/api/secrets/{name}": {
+        parameters: [{ $ref: "#/components/parameters/Name" }],
+        put: {
+          operationId: "putSecret",
+          parameters: [{ name: "env", in: "path", schema: { type: "string", enum: ["a", "b"] } }, { name: "q", in: "query", schema: { type: "string" } }],
+          requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/SecretBody" } } } },
+        },
+      },
+    },
+    components: {
+      parameters: { Name: { name: "name", in: "path", required: true, schema: { type: "string", minLength: 3, pattern: "^[A-Z_]+$" } } },
+      schemas: { SecretBody: { type: "object", required: ["value"], properties: { value: { type: "string", minLength: 1 } } } },
+    },
+  };
+
+  it("validates the named path parameter beside the body, keyed like a body field", () => {
+    const v = createBodyValidator(secretDoc, "putSecret", { pathParams: ["name"] });
+    expect(v.validate({ name: "API_KEY", value: "x" })).toEqual({});
+    expect(Object.keys(v.validate({ name: "a", value: "" })).sort()).toEqual(["body.name", "body.value"]);
+    expect(Object.keys(v.validate({ value: "x" }))).toEqual(["body.name"]);
+  });
+  it("true takes every path parameter, a path item's and the operation's, and never a query one", () => {
+    const v = createBodyValidator(secretDoc, "putSecret", { pathParams: true });
+    expect(Object.keys((v.schema.properties as object) ?? {}).sort()).toEqual(["env", "name", "value"]);
+  });
+  it("throws for a name the operation does not have", () => {
+    expect(() => createBodyValidator(secretDoc, "putSecret", { pathParams: ["nope"] })).toThrow(/no path parameter "nope"/);
+  });
+  it("leaves a validator without the option exactly as it was", () => {
+    expect(createBodyValidator(secretDoc, "putSecret").validate({ value: "x" })).toEqual({});
+  });
+});

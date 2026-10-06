@@ -62,6 +62,20 @@ describe("useLive", () => {
     expect(stale(qc, ME)).toBe(false);
   });
 
+  it("an event with an id still refetches every query of the resource: the id is for onEvent, not for narrowing", async () => {
+    const qc = newClient();
+    const wrapper = setup(qc);
+    const s = fakeStream();
+    const seen: unknown[] = [];
+    const { result } = renderHook(() => useLive(opts(s, { onEvent: (d: unknown) => void seen.push(d) })), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("live"));
+    act(() => s.push('event: change\nid: 1\ndata: {"resource":"widgets","id":"2","project":"p"}\n\n'));
+    await waitFor(() => expect(stale(qc, WIDGETS)).toBe(true));
+    expect(stale(qc, WIDGET)).toBe(true); // the detail query of id "1" too
+    expect(stale(qc, PEOPLE)).toBe(false);
+    expect(seen).toEqual([{ resource: "widgets", id: "2", project: "p" }]);
+  });
+
   it("an event naming no resource refreshes everything under /api/ but not other queries", async () => {
     const qc = newClient();
     const wrapper = setup(qc);

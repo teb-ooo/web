@@ -8,7 +8,7 @@ let registered = false;
 
 function aggregate(): LiveStatus {
   const all = [...statuses.values()];
-  for (const s of ["live", "degraded", "reconnecting"] as const) if (all.includes(s)) return s;
+  for (const s of ["degraded", "reconnecting", "live"] as const) if (all.includes(s)) return s;
   return "off";
 }
 
@@ -33,8 +33,9 @@ export function clearLiveStatus(id: string): void {
 }
 
 /**
- * The live-data status of the screen for the platform bar's dot: `live` while any stream is live, else `degraded`,
- * else `reconnecting`, else `off` (also when no screen has a stream).
+ * The live-data status of the screen for the platform bar's dot, the worst of its streams: `degraded` if any stream is,
+ * else `reconnecting`, else `live`, else `off` (also when no screen has a stream). One healthy stream never hides a
+ * broken one.
  */
 export function useLiveStatus(): LiveStatus {
   return useSyncExternalStore(

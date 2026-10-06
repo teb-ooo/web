@@ -166,20 +166,64 @@ function check(root: Schema, schema: Schema, value: unknown, path: string[], out
   }
 }
 
+export interface BodyValidatorOptions {
+  /**
+   * Also validate the operation's path parameters as fields of the same object, so a form whose field is a path
+   * parameter (a secret's `name`) needs one validator: `true` for all of them, or the names. Errors are keyed
+   * `body.<name>` like the body's own.
+   */
+  pathParams?: true | readonly string[];
+}
+
+function pathParamSchemas(doc: OpenApiDocument, operationId: string): Record<string, Schema> {
+  for (const item of Object.values(doc.paths ?? {})) {
+    for (const op of Object.values(item ?? {})) {
+      if (!isRecord(op) || op.operationId !== operationId) continue;
+      const params = [...(Array.isArray((item as Record<string, unknown>).parameters) ? ((item as Record<string, unknown>).parameters as unknown[]) : []), ...(Array.isArray(op.parameters) ? op.parameters : [])];
+      const out: Record<string, Schema> = {};
+      for (const raw of params) {
+        let p: unknown = raw;
+        if (isRecord(p) && typeof p.$ref === "string") p = resolveRef({ components: doc.components ?? {} }, p.$ref);
+        if (isRecord(p) && p.in === "path" && typeof p.name === "string" && isRecord(p.schema)) out[p.name] = p.schema;
+      }
+      return out;
+    }
+  }
+  return {};
+}
+
 /**
  * Builds a validator for a request body.
  *
  * - `createBodyValidator(doc, "createItem")`: takes the OpenAPI document and an operation id.
+ * - `createBodyValidator(doc, "putSecret", { pathParams: ["name"] })`: the same, with the named path parameters validated as fields beside the body's.
  * - `createBodyValidator(schema)`: takes a schema object; `$ref`s into `#/components` need the `components` key, so pass a doc for those.
  *
  * The check interprets the schema (no code generation, so it runs under a CSP without 'unsafe-eval') and rejects
  * what Huma would reject, reporting every problem with Huma-style keys.
  */
-export function createBodyValidator<T = unknown>(spec: OpenApiDocument | JsonSchema, operationId?: string): BodyValidator<T> {
+export function createBodyValidator<T = unknown>(spec: OpenApiDocument | JsonSchema, operationId?: string, options: BodyValidatorOptions = {}): BodyValidator<T> {
   let schema: JsonSchema;
   if (operationId !== undefined) {
     const doc = spec as OpenApiDocument;
-    schema = { ...findBodySchema(doc, operationId), components: doc.components ?? {} };
+    const components = doc.components ?? {};
+    schema = { ...findBodySchema(doc, operationId), components };
+    if (options.pathParams !== undefined) {
+      const all = pathParamSchemas(doc, operationId);
+      const names = options.pathParams === true ? Object.keys(all) : options.pathParams;
+      const missing = names.filter((n) => all[n] === undefined);
+      if (missing.length > 0) throw new Error(`Operation "${operationId}" has no path parameter ${missing.map((n) => `"${n}"`).join(", ")}`);
+      const body = typeof schema.$ref === "string" ? resolveRef(schema, schema.$ref) : schema;
+      if (!isRecord(body) || body.type !== "object") throw new Error(`Operation "${operationId}" has no object request body to add path parameters to`);
+      const props = isRecord(body.properties) ? body.properties : {};
+      const required = Array.isArray(body.required) ? body.required : [];
+      schema = {
+        ...body,
+        components,
+        properties: { ...props, ...Object.fromEntries(names.map((n) => [n, all[n]])) },
+        required: [...required, ...names.filter((n) => !required.includes(n))],
+      };
+    }
   } else {
     schema = spec as JsonSchema;
   }
