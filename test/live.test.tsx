@@ -124,6 +124,28 @@ describe("useLive", () => {
     expect(zero.result.current.status).toBe("off");
   });
 
+  it("keeps the page's ?live=1 or ?live=0 when navigation drops the query string", async () => {
+    const qc = newClient();
+    const wrapper = setup(qc);
+    const s = fakeStream();
+    Object.defineProperty(navigator, "webdriver", { configurable: true, value: true });
+    window.history.replaceState(null, "", "/?live=1");
+    const on = renderHook(() => useLive(opts(s)), { wrapper });
+    await waitFor(() => expect(on.result.current.status).toBe("live"));
+    window.history.replaceState(null, "", "/other"); // a client-side navigation: the query string is gone
+    on.rerender();
+    expect(on.result.current.status).toBe("live");
+    on.unmount();
+
+    Object.defineProperty(navigator, "webdriver", { configurable: true, value: false });
+    window.history.replaceState(null, "", "/?live=0");
+    const off = renderHook(() => useLive(opts(s)), { wrapper });
+    expect(off.result.current.status).toBe("off");
+    window.history.replaceState(null, "", "/other");
+    off.rerender();
+    expect(off.result.current.status).toBe("off");
+  });
+
   it("a degraded event shows degraded until the next change", async () => {
     const qc = newClient();
     const wrapper = setup(qc);

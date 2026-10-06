@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { matchesPaths, useLiveQueries } from "./live-queries.js";
 import type { LiveEvent, LiveQueries, LiveQueriesOptions, QueryMatcher } from "./live-queries.js";
@@ -31,10 +31,14 @@ export interface LiveOptions extends Pick<LiveQueriesOptions, "onEvent" | "debou
   enabled?: boolean;
 }
 
-/** Off in a test browser, so `networkidle` settles, unless forced; off with `?live=0`. */
-function streamAllowed(force: boolean | undefined): boolean {
-  if (force === true || searchFlag("live") === "1") return true;
-  if (searchFlag("live") === "0") return false;
+/**
+ * Off in a test browser, so `networkidle` settles, unless forced; off with `?live=0`. `flag` is the page's `?live=` value as it
+ * was when the hook mounted: a client-side navigation drops the query string, and the choice made by the URL the page was
+ * opened with must survive it.
+ */
+function streamAllowed(force: boolean | undefined, flag: string | null): boolean {
+  if (force === true || flag === "1") return true;
+  if (flag === "0") return false;
   return !isTestBrowser();
 }
 
@@ -48,7 +52,8 @@ function streamAllowed(force: boolean | undefined): boolean {
 export function useLive(options: LiveOptions = {}): LiveQueries {
   const { url = "/api/live", resources = {}, paths = ["/api/"], pollWhenNotLiveMs, force, enabled = true } = options;
   const queryClient = useQueryClient();
-  const allowed = enabled && streamAllowed(force);
+  const [liveFlag] = useState(() => searchFlag("live")); // read once per mount, not on every render
+  const allowed = enabled && streamAllowed(force, liveFlag);
 
   const invalidateFor = (events: readonly LiveEvent[]): QueryMatcher | null => {
     const names = new Set<string>();
