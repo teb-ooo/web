@@ -48,10 +48,12 @@ export interface ListTableOptions<T, D, F extends ListFilters = ListFilters, Q e
   filters?: F & ValidFilters<F, Q>;
   /** Initial sort; null for the server's own order. */
   sort?: ListSort | null;
-  /** Rows per page: sent as `limit`. @default 25 */
+  /**
+   * The most rows a page holds, sent as `limit`: pick the one that suits the table (100 for a dense list of one-line
+   * rows, 25 for tall ones). The person is not offered a choice, so there is no page-size control and the address does
+   * not carry one. @default 25
+   */
   pageSize?: number;
-  /** Page sizes offered by the table's rows-per-page select. */
-  pageSizes?: number[];
   /** Wait this long after the last keystroke before the search is sent. @default 250 */
   debounceMs?: number;
   /** Query parameter names, when the operation does not use these. */
@@ -61,7 +63,7 @@ export interface ListTableOptions<T, D, F extends ListFilters = ListFilters, Q e
   /** Reads a sort back from the address; needed only with a custom `formatSort` and `urlState`. Default: the inverse of the default format. */
   parseSort?: (text: string) => ListSort | null;
   /**
-   * Keep the search, the filters, the sort and the page size in the address (`?q=...&status=open&sort=-created&limit=50`)
+   * Keep the search, the filters and the sort in the address (`?q=...&status=open&sort=-created`)
    * so a reload, a shared link and a bookmark restore them. The address is replaced (the back button does not step through
    * keystrokes), the page always starts at the first, and a filter that is off is left out. Filter names are used as they
    * are, so keep them from clashing with the page's own search parameters. @default false
@@ -98,8 +100,6 @@ export interface ListTableResult<T, F extends ListFilters, Q extends object = Li
       totalIsLowerBound: boolean;
       hasNext: boolean;
       onPageChange: (page: number) => void;
-      onPageSizeChange: (pageSize: number) => void;
-      pageSizes?: number[];
     };
   };
 }
@@ -133,7 +133,7 @@ function readFilter(text: string, initial: unknown): string | number | boolean |
  * resets to the first page whenever any of them changes, and returns props to spread onto `DataTable`.
  */
 export function useListTable<T, D, F extends ListFilters = ListFilters, Q extends object = ListParams>(options: ListTableOptions<T, D, F, Q>): ListTableResult<T, F, Q> {
-  const { useList, select = defaultSelect as (d: D) => { rows: T[]; nextCursor?: string | null | undefined }, pageSizes, debounceMs = 250, paramNames, formatSort = defaultFormatSort } = options;
+  const { useList, select = defaultSelect as (d: D) => { rows: T[]; nextCursor?: string | null | undefined }, debounceMs = 250, paramNames, formatSort = defaultFormatSort } = options;
   const names = { q: "q", limit: "limit", cursor: "cursor", sort: "sort", ...paramNames };
   const taken = new Set<string>([names.q, names.limit, names.cursor, names.sort]);
   for (const k of Object.keys(options.filters ?? {})) {
@@ -152,25 +152,21 @@ export function useListTable<T, D, F extends ListFilters = ListFilters, Q extend
     return base as F;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const initialPageSize = (() => {
-    const n = Number(url.get(names.limit));
-    return urlState && Number.isFinite(n) && n > 0 ? n : (options.pageSize ?? 25);
-  })();
+  const pageSize = options.pageSize ?? 25;
 
   const [query, setQuery] = useState(urlState ? (url.get(names.q) ?? "") : "");
   const [debounced, setDebounced] = useState(urlState ? (url.get(names.q) ?? "").trim() : "");
   const [filters, setFilters] = useState<F>(initialFilters);
   const [sort, setSort] = useState<ListSort | null>(() => (urlState && url.has(names.sort) && parseSort ? parseSort(url.get(names.sort) ?? "") : null) ?? options.sort ?? null);
-  const [pageSize, setPageSize] = useState(initialPageSize);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(query.trim()), debounceMs);
     return () => window.clearTimeout(t);
   }, [query, debounceMs]);
 
-  const signature = JSON.stringify([debounced, filters, sort, pageSize]);
+  const signature = JSON.stringify([debounced, filters, sort]);
   const [paging, setPaging] = useState<Paging>({ signature, cursors: [undefined], page: 0 });
-  // Any change of search, filters, sort or page size starts again from the first page.
+  // Any change of search, filters or sort starts again from the first page.
   const current = paging.signature === signature ? paging : { signature, cursors: [undefined], page: 0 };
   if (paging.signature !== signature) setPaging(current);
 
@@ -180,7 +176,6 @@ export function useListTable<T, D, F extends ListFilters = ListFilters, Q extend
     const patch: Record<string, string | undefined> = {
       [names.q]: debounced === "" ? undefined : debounced,
       [names.sort]: sort ? formatSort(sort) : undefined,
-      [names.limit]: pageSize === (options.pageSize ?? 25) ? undefined : String(pageSize),
     };
     for (const [k, v] of Object.entries(filters)) patch[k] = v === undefined || v === "" ? undefined : String(v);
     const current = new URLSearchParams(router ? router.state.location.searchStr : window.location.search);
@@ -195,7 +190,7 @@ export function useListTable<T, D, F extends ListFilters = ListFilters, Q extend
       window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlState, debounced, filters, sort, pageSize]);
+  }, [urlState, debounced, filters, sort]);
 
   const params = useMemo<ListParams>(() => {
     const p: ListParams = { [names.limit]: pageSize };
@@ -265,8 +260,6 @@ export function useListTable<T, D, F extends ListFilters = ListFilters, Q extend
         totalIsLowerBound: moreAfterThis,
         hasNext,
         onPageChange,
-        onPageSizeChange: setPageSize,
-        ...(pageSizes ? { pageSizes } : {}),
       },
     },
   };

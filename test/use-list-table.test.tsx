@@ -90,14 +90,14 @@ describe("useListTable over a list of more than one page", () => {
     await waitFor(() => expect(result.current.hasActiveFilters).toBe(false));
   });
 
-  it("changing the page size starts again; Next cannot skip a page", async () => {
-    const { result } = setup({ pageSizes: [10, 25] });
-    await waitFor(() => expect(result.current.table.rows.length).toBe(25));
-    act(() => result.current.table.pagination.onPageChange(2)); // no cursor for page 3 yet
-    expect(result.current.table.pagination.page).toBe(0);
-    act(() => result.current.table.pagination.onPageSizeChange(10));
+  it("Next cannot skip a page; the page size is the app's, sent as limit, with no way for the person to change it", async () => {
+    const { result } = setup({ pageSize: 10 });
     await waitFor(() => expect(result.current.table.rows.length).toBe(10));
     expect(result.current.params.limit).toBe(10);
+    act(() => result.current.table.pagination.onPageChange(2)); // no cursor for page 3 yet
+    expect(result.current.table.pagination.page).toBe(0);
+    expect(result.current.table.pagination).not.toHaveProperty("onPageSizeChange");
+    expect(result.current.table.pagination).not.toHaveProperty("pageSizes");
   });
 });
 
@@ -155,14 +155,14 @@ describe("useListTable with urlState", () => {
   const setup2 = () => renderHook(() => useListTable<Row, { items: Row[]; next_cursor?: string }, { status?: string; archived?: boolean }>({ useList: useRows, debounceMs: 5, urlState: true, filters: { status: undefined, archived: false } }), { wrapper });
   const reset = () => window.history.replaceState(null, "", "/");
 
-  it("restores the search, filters, sort and page size from the address on mount", async () => {
+  it("restores the search, filters and sort from the address on mount, and ignores a limit in it (the page size is the app's)", async () => {
     window.history.replaceState(null, "", "/?q=row-1&status=open&archived=true&sort=-name&limit=10");
     const { result } = setup2();
     expect(result.current.query).toBe("row-1");
     expect(result.current.filters).toEqual({ status: "open", archived: true });
     expect(result.current.sort).toEqual({ columnId: "name", direction: "desc" });
-    expect(result.current.table.pagination.pageSize).toBe(10);
-    await waitFor(() => expect(result.current.params).toMatchObject({ q: "row-1", status: "open", archived: true, sort: "-name", limit: 10 }));
+    expect(result.current.table.pagination.pageSize).toBe(25);
+    await waitFor(() => expect(result.current.params).toMatchObject({ q: "row-1", status: "open", archived: true, sort: "-name", limit: 25 }));
     reset();
   });
 

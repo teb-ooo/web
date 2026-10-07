@@ -61,7 +61,7 @@ const list = useListTable({
   useList: (params) => $api.useQuery("get", "/api/issues", { params: { query: params } }, { placeholderData: keepPreviousData }),
   filters: { status: undefined as string | undefined },
   sort: { columnId: "updated", direction: "desc" },
-  pageSizes: [25, 50, 100],
+  pageSize: 100, // the most rows a page holds: pick what suits the table; the person gets no choice
   urlState: true,
 });
 return (
@@ -73,11 +73,11 @@ return (
 );
 ```
 
-- **Owns:** the search text (`query`, sent debounced as `q`), the `filters` (each its own parameter, left out when empty), the `sort` (`-name` for descending), the page size (`limit`) and the cursor stack: Next uses the response's `next_cursor`, Previous goes back through the cursors already seen. Any change of search, filter, sort or page size returns to the first page; Next is ignored while a page change is still loading.
+- **Owns:** the search text (`query`, sent debounced as `q`), the `filters` (each its own parameter, left out when empty), the `sort` (`-name` for descending), the cursor stack: Next uses the response's `next_cursor`, Previous goes back through the cursors already seen. Any change of search, filter or sort returns to the first page; Next is ignored while a page change is still loading.
 - **Returns:** `table` (spread onto `DataTable`: `rows`, `loading`, `error` with `onRetry`, `sort`, `onSortChange`, `pagination`), `query`/`setQuery`, `filters`/`setFilter`/`clearFilters`, `hasActiveFilters`, `params`, `isFetching`. `table.loading` is true for a first load and a page change, not for a quiet refetch of the same page. The total is unknown for a cursor list, so the pager says "1-25 of 25+" while there is a next page.
 - **Typed by the operation:** pass the generated query type as the fourth generic (`useListTable<Row, Data, Filters, QueryOf<"/api/issues">>`): a misspelt filter, a wrong value type or a name the hook owns (`q`, `limit`, `cursor`, `sort`; `paramNames` renames them) is a type error. Filters may be strings, numbers or booleans.
-- **In the address:** `urlState: true` keeps the search, filters (typed like their initial values), sort and page size in the address (`?q=...&status=open&sort=-created&limit=50`), read once on mount from the router's search (or the window's without a router) and written back by replacing the entry; the page always starts at the first. Give a custom `formatSort` a `parseSort`.
-- **Options:** `select(data)` (default `data.items` and `data.next_cursor`), `paramNames`, `formatSort`, `parseSort`, `debounceMs` (250), `pageSize` (25), `urlState`.
+- **In the address:** `urlState: true` keeps the search, filters (typed like their initial values), and sort in the address (`?q=...&status=open&sort=-created`), read once on mount from the router's search (or the window's without a router) and written back by replacing the entry; the page always starts at the first. Give a custom `formatSort` a `parseSort`.
+- **Options:** `select(data)` (default `data.items` and `data.next_cursor`), `paramNames`, `formatSort`, `parseSort`, `debounceMs` (250), `pageSize` (25: the most rows a page holds, sent as `limit`; pick the one that suits the table, 100 for a dense list of one-line rows and 25 for tall ones; the person cannot change it and there is no page-size option or control), `urlState`.
 
 ## Live data
 `useLive()` keeps every generated-hook query current from the app's `/api/live` event stream (design in the shared docs `live-data.md`, rule UI-yvn), so a screen changes within a second or two when someone else changes the data, with no reload. The shell draws the status dot; an app calls it once, at the root:
