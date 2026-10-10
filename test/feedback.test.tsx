@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { captureConsoleErrors, clearConsoleErrors, describeElement, recentConsoleErrors, selectorOf, FEEDBACK_IGNORE_ATTR, isFeedbackNode } from "../src/feedback-capture.js";
+import { captureConsoleErrors, clearConsoleErrors, clipLine, describeElement, recentConsoleErrors, selectorOf, FEEDBACK_IGNORE_ATTR, isFeedbackNode } from "../src/feedback-capture.js";
 import { useFeedback } from "../src/feedback.js";
 import { HttpResponse, createTestQueryClient, http, setupMswServer } from "../src/testing.js";
 
@@ -41,6 +41,20 @@ describe("console errors", () => {
     expect(got.at(-1)).toBe("Uncaught boom");
     expect(got.some((l) => l.startsWith("xxx") && l.endsWith("…"))).toBe(true);
     expect(got).not.toContain("problem 0");
+  });
+});
+
+describe("a console line the server accepts", () => {
+  it("is never longer than 500 characters or 500 bytes, ellipsis included", () => {
+    for (const line of ["x".repeat(500), "x".repeat(501), "x".repeat(900), "é".repeat(400), "😀".repeat(300), "日本語".repeat(200), `${"a".repeat(498)}日本`]) {
+      const out = clipLine(line);
+      expect([...out].length).toBeLessThanOrEqual(500);
+      expect(new TextEncoder().encode(out).length).toBeLessThanOrEqual(500);
+      expect(out.length).toBeLessThanOrEqual(500);
+    }
+    expect(clipLine("short")).toBe("short");
+    expect(clipLine("x".repeat(500))).toBe("x".repeat(500));
+    expect(clipLine("x".repeat(501)).endsWith("…")).toBe(true);
   });
 });
 
@@ -127,6 +141,31 @@ describe("useFeedback", () => {
     expect(received).toContain('"viewport"');
     expect(received).toContain('name="screenshot"');
     expect(window.localStorage.getItem("teb-ooo:feedback-draft")).toBeNull();
+  });
+
+  it("a refusal of the console errors does not block the feedback: it is sent again without them", async () => {
+    server.use(me({ is_owner: true }));
+    const bodies: string[] = [];
+    server.use(
+      http.post("*/_playground/feedback", async ({ request }) => {
+        bodies.push(await request.text());
+        if (bodies.length === 1) return HttpResponse.json({ title: "Unprocessable", detail: "a console_errors entry is longer than 500 characters" }, { status: 422 });
+        return HttpResponse.json({ bead: "ui-78", agent: "ui", status: "idle" });
+      }),
+    );
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { result } = renderHook(() => useFeedback(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.available).toBe(true));
+    console.error("some page error");
+    act(() => result.current.open());
+    act(() => result.current.setText("it did not send"));
+    await act(async () => result.current.submit());
+    await waitFor(() => expect(result.current.status, String(result.current.error)).toBe("sent"));
+    quiet.mockRestore();
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0]).toContain("some page error");
+    expect(bodies[1]).toContain('"console_errors":[]');
+    expect(result.current.result?.bead).toBe("ui-78");
   });
 
   it("keeps a draft when sending fails, offers it again, and does not send empty text", async () => {

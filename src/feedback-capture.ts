@@ -10,8 +10,28 @@ const ring: string[] = [];
 let installs = 0;
 let restore: (() => void) | undefined;
 
+const encoder = new TextEncoder();
+
+/**
+ * A line the server accepts: at most `MAX_LINE_CHARS` (500) characters and, to be safe whichever way it counts, at most 500
+ * bytes of UTF-8, including the "…" that marks a cut. (Cutting at 500 and then adding the "…" made 501, which the server
+ * refused, and a report of a console error must never be refused because of the error's own length.)
+ */
+export function clipLine(line: string): string {
+  if (line.length <= MAX_LINE_CHARS && encoder.encode(line).length <= MAX_LINE_CHARS) return line;
+  let out = "";
+  let bytes = encoder.encode("…").length;
+  for (const ch of line) {
+    const n = encoder.encode(ch).length;
+    if (bytes + n > MAX_LINE_CHARS || [...out].length + 2 > MAX_LINE_CHARS) break;
+    out += ch;
+    bytes += n;
+  }
+  return `${out}…`;
+}
+
 function push(line: string) {
-  ring.push(line.length > MAX_LINE_CHARS ? `${line.slice(0, MAX_LINE_CHARS)}…` : line);
+  ring.push(clipLine(line));
   while (ring.length > MAX_CONSOLE_LINES) ring.shift();
 }
 
@@ -57,7 +77,7 @@ export function captureConsoleErrors(): () => void {
 }
 
 export function recentConsoleErrors(): string[] {
-  return [...ring];
+  return ring.map(clipLine);
 }
 
 export function clearConsoleErrors(): void {

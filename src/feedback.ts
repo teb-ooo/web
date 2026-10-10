@@ -314,12 +314,24 @@ export function useFeedback(options: FeedbackOptions = {}): FeedbackController {
     if (!available || text.trim() === "" || status === "sending") return;
     setStatus("sending");
     setError(null);
-    const body = new FormData();
-    body.set("text", text.trim());
-    body.set("context", JSON.stringify({ ...currentContext(), element: includeElement ? element : null }));
-    if (includeScreenshot && shotRef.current) body.set("screenshot", shotRef.current.blob, `screenshot.${shotRef.current.type === "image/png" ? "png" : "jpg"}`);
+    const post = async (consoleErrors: string[]) => {
+      const body = new FormData();
+      body.set("text", text.trim());
+      body.set("context", JSON.stringify({ ...currentContext(), console_errors: consoleErrors, element: includeElement ? element : null }));
+      if (includeScreenshot && shotRef.current) body.set("screenshot", shotRef.current.blob, `screenshot.${shotRef.current.type === "image/png" ? "png" : "jpg"}`);
+      return throwIfNotOk(await platformFetch(endpoint, { method: "POST", body }, options.fetch ? { fetch: options.fetch } : {}));
+    };
     try {
-      const res = await throwIfNotOk(await platformFetch(endpoint, { method: "POST", body }, options.fetch ? { fetch: options.fetch } : {}));
+      let res: Response;
+      try {
+        res = await post(recentConsoleErrors());
+      } catch (first) {
+        // The captured console errors are only a help. If the server refuses them (a limit it counts differently), send the
+        // report without them rather than blocking the person's feedback.
+        const refused = isApiError(first) && (first.status === 400 || first.status === 422) && /console_errors/.test(`${first.detail} ${first.errors.map((e) => e.location ?? "").join(" ")}`);
+        if (!refused) throw first;
+        res = await post([]);
+      }
       setResult((await res.json()) as FeedbackResult);
       setStatus("sent");
       writeDraft(null);
